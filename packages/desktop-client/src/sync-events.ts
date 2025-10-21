@@ -21,7 +21,6 @@ import { loadPrefs } from './prefs/prefsSlice';
 import { type AppStore } from './redux/store';
 import { signOut } from './users/usersSlice';
 
-
 export function listenForSyncEvent(store: AppStore, queryClient: QueryClient) {
   // TODO: Should this run on mobile too?
   const unlistenUnauthorized = listen('sync-event', async ({ type }) => {
