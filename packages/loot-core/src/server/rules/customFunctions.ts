@@ -4,7 +4,6 @@ import { ProcedureAst } from 'hyperformula/typings/parser';
 
 import { integerToAmount } from '../../shared/util';
 
-
 export class CustomFunctionsPlugin extends FunctionPlugin {
   integerToAmount(ast: ProcedureAst, state: InterpreterState) {
     return this.runFunction(
