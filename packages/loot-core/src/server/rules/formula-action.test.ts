@@ -191,4 +191,48 @@ describe('Formula-based rule actions', () => {
       expect(transaction.notes).toBe('750');
     });
   });
+
+  describe('executeFormulaSync', () => {
+    it('should support balance field variable', () => {
+      const action = new Action('set', 'notes', null, {
+        formula: '=balance * 2',
+      });
+
+      const transaction: Partial<TransactionForRules> = {
+        balance: 1500,
+        notes: 'original',
+      };
+      const result = action.executeFormulaSync('=balance * 2', transaction);
+
+      expect(result).toBe(3000);
+    });
+
+    it('should support INTEGER_TO_AMOUNT function', () => {
+      const action = new Action('set', 'notes', null, {
+        formula: '=INTEGER_TO_AMOUNT(1234)',
+      });
+
+      const transaction = { notes: 'original' };
+      const result = action.executeFormulaSync(
+        '=INTEGER_TO_AMOUNT(1234)',
+        transaction,
+      );
+
+      expect(result).toBe(12.34);
+    });
+
+    it('should support INTEGER_TO_AMOUNT function with custom decimal places', () => {
+      const action = new Action('set', 'notes', null, {
+        formula: '=INTEGER_TO_AMOUNT(1234, 3)',
+      });
+
+      const transaction = { notes: 'original' };
+      const result = action.executeFormulaSync(
+        '=INTEGER_TO_AMOUNT(1234, 3)',
+        transaction,
+      );
+
+      expect(result).toBe(1.234);
+    });
+  });
 });
