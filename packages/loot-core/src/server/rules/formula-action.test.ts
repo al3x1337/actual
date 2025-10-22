@@ -190,9 +190,7 @@ describe('Formula-based rule actions', () => {
       // Should convert number to string
       expect(transaction.notes).toBe('750');
     });
-  });
 
-  describe('executeFormulaSync', () => {
     it('should support balance field variable', () => {
       const action = new Action('set', 'notes', null, {
         formula: '=balance * 2',
