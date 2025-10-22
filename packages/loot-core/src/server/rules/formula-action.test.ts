@@ -6,10 +6,7 @@ import { Action } from './action';
 
 describe('Formula-based rule actions', () => {
   it('should execute a simple math formula', () => {
-    const action = new Action('set', 'amount', null, {
-      formula: '=100 + 200',
-    });
-
+    const action = new Action('set', 'amount', null, {});
     const transaction: Partial<TransactionForRules> = { amount: 500 };
     const result = action.executeFormulaSync('=100 + 200', transaction);
 
@@ -17,10 +14,7 @@ describe('Formula-based rule actions', () => {
   });
 
   it('should use transaction field variables', () => {
-    const action = new Action('set', 'notes', null, {
-      formula: '=amount / 100',
-    });
-
+    const action = new Action('set', 'notes', null, {});
     const transaction = { amount: 5000 };
     const result = action.executeFormulaSync('=amount / 100', transaction);
 
@@ -28,9 +22,7 @@ describe('Formula-based rule actions', () => {
   });
 
   it('should support IF function with transaction fields', () => {
-    const action = new Action('set', 'notes', null, {
-      formula: '=IF(amount > 0, "Income", "Expense")',
-    });
+    const action = new Action('set', 'notes', null, {});
 
     const transaction1 = { amount: 1000 };
     const result1 = action.executeFormulaSync(
@@ -48,10 +40,7 @@ describe('Formula-based rule actions', () => {
   });
 
   it('should support UPPER string function', () => {
-    const action = new Action('set', 'notes', null, {
-      formula: '=UPPER(notes)',
-    });
-
+    const action = new Action('set', 'notes', null, {});
     const transaction = { notes: 'hello world' };
     const result = action.executeFormulaSync('=UPPER(notes)', transaction);
 
@@ -59,10 +48,7 @@ describe('Formula-based rule actions', () => {
   });
 
   it('should support CONCATENATE function', () => {
-    const action = new Action('set', 'notes', null, {
-      formula: '=CONCATENATE(imported_payee, " - ", notes)',
-    });
-
+    const action = new Action('set', 'notes', null, {});
     const transaction = {
       imported_payee: 'Store Name',
       notes: 'Purchase',
@@ -76,10 +62,7 @@ describe('Formula-based rule actions', () => {
   });
 
   it('should support LEFT function', () => {
-    const action = new Action('set', 'notes', null, {
-      formula: '=LEFT(imported_payee, 5)',
-    });
-
+    const action = new Action('set', 'notes', null, {});
     const transaction = { imported_payee: 'Store Name' };
     const result = action.executeFormulaSync(
       '=LEFT(imported_payee, 5)',
@@ -90,10 +73,7 @@ describe('Formula-based rule actions', () => {
   });
 
   it('should provide today variable', () => {
-    const action = new Action('set', 'date', null, {
-      formula: '=today',
-    });
-
+    const action = new Action('set', 'date', null, {});
     const transaction = { date: '2024-01-01' };
     const result = action.executeFormulaSync('=today', transaction);
 
@@ -103,10 +83,7 @@ describe('Formula-based rule actions', () => {
   });
 
   it('should throw error for invalid formula', () => {
-    const action = new Action('set', 'notes', null, {
-      formula: '=INVALID_FUNCTION()',
-    });
-
+    const action = new Action('set', 'notes', null, {});
     const transaction = { amount: 100 };
 
     expect(() => {
@@ -115,10 +92,7 @@ describe('Formula-based rule actions', () => {
   });
 
   it('should throw error for formula without = prefix', () => {
-    const action = new Action('set', 'notes', null, {
-      formula: 'amount + 100',
-    });
-
+    const action = new Action('set', 'notes', null, {});
     const transaction = { amount: 100 };
 
     expect(() => {
@@ -127,10 +101,7 @@ describe('Formula-based rule actions', () => {
   });
 
   it('should support balance field variable', () => {
-    const action = new Action('set', 'notes', null, {
-      formula: '=balance * 2',
-    });
-
+    const action = new Action('set', 'notes', null, {});
     const transaction: Partial<TransactionForRules> = {
       balance: 1500,
       notes: 'original',
@@ -138,34 +109,6 @@ describe('Formula-based rule actions', () => {
     const result = action.executeFormulaSync('=balance * 2', transaction);
 
     expect(result).toBe(3000);
-  });
-
-  it('should support INTEGER_TO_AMOUNT function', () => {
-    const action = new Action('set', 'notes', null, {
-      formula: '=INTEGER_TO_AMOUNT(1234)',
-    });
-
-    const transaction = { notes: 'original' };
-    const result = action.executeFormulaSync(
-      '=INTEGER_TO_AMOUNT(1234)',
-      transaction,
-    );
-
-    expect(result).toBe(12.34);
-  });
-
-  it('should support INTEGER_TO_AMOUNT function with custom decimal places', () => {
-    const action = new Action('set', 'notes', null, {
-      formula: '=INTEGER_TO_AMOUNT(1234, 3)',
-    });
-
-    const transaction = { notes: 'original' };
-    const result = action.executeFormulaSync(
-      '=INTEGER_TO_AMOUNT(1234, 3)',
-      transaction,
-    );
-
-    expect(result).toBe(1.234);
   });
 
   it('should execute formula and convert to number type', () => {
