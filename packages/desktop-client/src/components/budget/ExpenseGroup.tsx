@@ -7,6 +7,8 @@ import { View } from '@actual-app/components/view';
 import { RenderMonths } from './RenderMonths';
 import { SidebarGroup } from './SidebarGroup';
 
+import { type BudgetComponents } from '.';
+
 import {
   useDraggable,
   useDroppable,
@@ -23,7 +25,7 @@ type ExpenseGroupProps = {
   collapsed: boolean;
   editingCell: { id: string; cell: string } | null;
   dragState: DragState<ComponentProps<typeof SidebarGroup>['group']>;
-  MonthComponent: ComponentProps<typeof RenderMonths>['component'];
+  MonthComponent: BudgetComponents['ExpenseGroupComponent'];
   onEditName?: ComponentProps<typeof SidebarGroup>['onEdit'];
   onSave?: ComponentProps<typeof SidebarGroup>['onSave'];
   onDelete?: ComponentProps<typeof SidebarGroup>['onDelete'];
@@ -135,7 +137,9 @@ export function ExpenseGroup({
           onApplyBudgetTemplatesInGroup={onApplyBudgetTemplatesInGroup}
           onShowNewCategory={onShowNewCategory}
         />
-        <RenderMonths component={MonthComponent} args={{ group }} />
+        <RenderMonths>
+          {({ month }) => <MonthComponent month={month} group={group} />}
+        </RenderMonths>
       </View>
     </Row>
   );
