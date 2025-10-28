@@ -21,7 +21,6 @@ export const BudgetCategories = memo(
   ({
     categoryGroups,
     editingCell,
-    dataComponents,
     onBudgetAction,
     onShowActivity,
     onEditName,
@@ -238,7 +237,6 @@ export const BudgetCategories = memo(
                   group={item.value}
                   editingCell={editingCell}
                   collapsed={collapsedGroupIds.includes(item.value.id)}
-                  MonthComponent={dataComponents.ExpenseGroupComponent}
                   dragState={dragState}
                   onEditName={onEditName}
                   onSave={_onSaveGroup}
@@ -258,7 +256,6 @@ export const BudgetCategories = memo(
                   cat={item.value}
                   categoryGroup={item.group}
                   editingCell={editingCell}
-                  MonthComponent={dataComponents.ExpenseCategoryComponent}
                   dragState={dragState}
                   onEditName={onEditName}
                   onEditMonth={onEditMonth}
@@ -279,10 +276,7 @@ export const BudgetCategories = memo(
                     backgroundColor: theme.tableBackground,
                   }}
                 >
-                  <IncomeHeader
-                    MonthComponent={dataComponents.IncomeHeaderComponent}
-                    onShowNewGroup={onShowNewGroup}
-                  />
+                  <IncomeHeader onShowNewGroup={onShowNewGroup} />
                 </View>
               );
               break;
@@ -291,7 +285,6 @@ export const BudgetCategories = memo(
                 <IncomeGroup
                   group={item.value}
                   editingCell={editingCell}
-                  MonthComponent={dataComponents.IncomeGroupComponent}
                   collapsed={collapsedGroupIds.includes(item.value.id)}
                   onEditName={onEditName}
                   onSave={_onSaveGroup}
@@ -306,7 +299,6 @@ export const BudgetCategories = memo(
                   cat={item.value}
                   editingCell={editingCell}
                   isLast={idx === items.length - 1}
-                  MonthComponent={dataComponents.IncomeCategoryComponent}
                   onEditName={onEditName}
                   onEditMonth={onEditMonth}
                   onSave={_onSaveCategory}
