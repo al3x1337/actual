@@ -76,6 +76,8 @@ export type LocalPrefs = Partial<{
   'budget.summaryCollapsed': boolean;
   'budget.showHiddenCategories': boolean;
   'budget.startMonth': string;
+  'budget.categoryLabelMap': Record<string, string[]>;
+  'budget.customCategoryLabels': Array<{ id: string; name: string }>;
   'flags.updateNotificationShownForVersion': string;
   reportsViewLegend: boolean;
   reportsViewSummary: boolean;

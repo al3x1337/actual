@@ -553,6 +553,15 @@ export type Modal =
         categoryId: CategoryEntity['id'];
         templates: Template[];
       };
+    }
+  | {
+      name: 'edit-category-group';
+      options: {
+        labelId: string;
+        labelName: string;
+        assignedCategoryIds: string[];
+        allCategories: CategoryEntity[];
+      };
     };
 
 type OpenAccountCloseModalPayload = {

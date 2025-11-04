@@ -16,6 +16,7 @@ import {
 } from 'loot-core/types/models';
 
 import { BudgetCategories } from './BudgetCategories';
+import { CategoryFilterSelector } from './CategoryFilterSelector';
 import { BudgetSummaries } from './BudgetSummaries';
 import { BudgetTotals } from './BudgetTotals';
 import { type MonthBounds, MonthsProvider } from './MonthsContext';
@@ -94,6 +95,9 @@ export function BudgetTable(props: BudgetTableProps) {
   const [editing, setEditing] = useState<{ id: string; cell: string } | null>(
     null,
   );
+  const [filteredCategoryIds, setFilteredCategoryIds] = useState<
+    string[] | null
+  >(null);
 
   const onEditMonth = (id: string, month: string) => {
     setEditing(id ? { id, cell: month } : null);
@@ -280,6 +284,10 @@ export function BudgetTable(props: BudgetTableProps) {
           expandAllCategories={expandAllCategories}
           collapseAllCategories={collapseAllCategories}
         />
+        <CategoryFilterSelector
+          categoryGroups={categoryGroups}
+          onFilterChange={setFilteredCategoryIds}
+        />
         <View
           style={{
             overflowY: 'scroll',
@@ -312,6 +320,7 @@ export function BudgetTable(props: BudgetTableProps) {
                 onBudgetAction={onBudgetAction}
                 onShowActivity={onShowActivity}
                 onApplyBudgetTemplatesInGroup={onApplyBudgetTemplatesInGroup}
+                filteredCategoryIds={filteredCategoryIds}
               />
             </SchedulesProvider>
           </View>

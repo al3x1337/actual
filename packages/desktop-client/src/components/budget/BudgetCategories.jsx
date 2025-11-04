@@ -33,6 +33,7 @@ export const BudgetCategories = memo(
     onApplyBudgetTemplatesInGroup,
     onReorderCategory,
     onReorderGroup,
+    filteredCategoryIds = null,
   }) => {
     const [collapsedGroupIds = [], setCollapsedGroupIdsPref] =
       useLocalPref('budget.collapsed');
@@ -53,9 +54,20 @@ export const BudgetCategories = memo(
             return [];
           }
 
-          const groupCategories = group.categories.filter(
+          let groupCategories = group.categories.filter(
             cat => showHiddenCategories || !cat.hidden,
           );
+
+          // Apply filter if active
+          if (filteredCategoryIds !== null && filteredCategoryIds.length > 0) {
+            groupCategories = groupCategories.filter(cat =>
+              filteredCategoryIds.includes(cat.id),
+            );
+            // If no categories match after filtering, hide the group
+            if (groupCategories.length === 0) {
+              return [];
+            }
+          }
 
           const items = [{ type: 'expense-group', value: { ...group } }];
 
@@ -82,22 +94,53 @@ export const BudgetCategories = memo(
       }
 
       if (incomeGroup) {
-        items = items.concat(
-          [
-            { type: 'income-separator' },
-            { type: 'income-group', value: incomeGroup },
-            newCategoryForGroup === incomeGroup.id && { type: 'new-category' },
-            ...(collapsedGroupIds.includes(incomeGroup.id)
-              ? []
-              : incomeGroup.categories.filter(
-                  cat => showHiddenCategories || !cat.hidden,
-                )
-            ).map(cat => ({
-              type: 'income-category',
-              value: cat,
-            })),
-          ].filter(x => x),
+        let incomeCategories = incomeGroup.categories.filter(
+          cat => showHiddenCategories || !cat.hidden,
         );
+
+        // Apply filter if active (income categories typically shouldn't be filtered)
+        // but we'll apply it for consistency
+        if (filteredCategoryIds !== null && filteredCategoryIds.length > 0) {
+          incomeCategories = incomeCategories.filter(cat =>
+            filteredCategoryIds.includes(cat.id),
+          );
+          // If no income categories match after filtering, don't show income section
+          if (incomeCategories.length === 0 && !newCategoryForGroup) {
+            // Skip income section
+          } else {
+            items = items.concat(
+              [
+                { type: 'income-separator' },
+                { type: 'income-group', value: incomeGroup },
+                newCategoryForGroup === incomeGroup.id && {
+                  type: 'new-category',
+                },
+                ...(collapsedGroupIds.includes(incomeGroup.id)
+                  ? []
+                  : incomeCategories
+                ).map(cat => ({
+                  type: 'income-category',
+                  value: cat,
+                })),
+              ].filter(x => x),
+            );
+          }
+        } else {
+          items = items.concat(
+            [
+              { type: 'income-separator' },
+              { type: 'income-group', value: incomeGroup },
+              newCategoryForGroup === incomeGroup.id && { type: 'new-category' },
+              ...(collapsedGroupIds.includes(incomeGroup.id)
+                ? []
+                : incomeCategories
+              ).map(cat => ({
+                type: 'income-category',
+                value: cat,
+              })),
+            ].filter(x => x),
+          );
+        }
       }
 
       return items;
@@ -107,6 +150,7 @@ export const BudgetCategories = memo(
       newCategoryForGroup,
       isAddingGroup,
       showHiddenCategories,
+      filteredCategoryIds,
     ]);
 
     const [dragState, setDragState] = useState(null);

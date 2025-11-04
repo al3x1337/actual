@@ -69,6 +69,7 @@ import { TrackingBudgetSummaryModal } from './modals/TrackingBudgetSummaryModal'
 import { TransferModal } from './modals/TransferModal';
 import { TransferOwnership } from './modals/TransferOwnership';
 import { UnmigrateBudgetAutomationsModal } from './modals/UnmigrateBudgetAutomationsModal';
+import { EditCategoryGroupModal } from './category-groups/EditCategoryGroupModal';
 import { CategoryLearning } from './payees/CategoryLearning';
 import { DiscoverSchedules } from './schedules/DiscoverSchedules';
 import { PostsOfflineNotification } from './schedules/PostsOfflineNotification';
@@ -110,6 +111,11 @@ export function Modals() {
         case 'category-automations-unmigrate':
           return budgetId ? (
             <UnmigrateBudgetAutomationsModal key={name} {...modal.options} />
+          ) : null;
+
+        case 'edit-category-group':
+          return budgetId ? (
+            <EditCategoryGroupModal key={key} {...modal.options} />
           ) : null;
 
         case 'keyboard-shortcuts':

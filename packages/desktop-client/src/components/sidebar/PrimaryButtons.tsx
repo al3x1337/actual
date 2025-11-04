@@ -7,6 +7,7 @@ import {
   SvgCheveronRight,
   SvgCog,
   SvgCreditCard,
+  SvgFolder,
   SvgReports,
   SvgStoreFront,
   SvgTag,
@@ -39,6 +40,7 @@ export function PrimaryButtons() {
     '/bank-sync',
     '/settings',
     '/tools',
+    '/category-groups',
   ].some(route => location.pathname.startsWith(route));
 
   useEffect(() => {
@@ -85,6 +87,12 @@ export function PrimaryButtons() {
             title={t('Tags')}
             Icon={SvgTag}
             to="/tags"
+            indent={15}
+          />
+          <SecondaryItem
+            title={t('Category Groups')}
+            Icon={SvgFolder}
+            to="/category-groups"
             indent={15}
           />
           <SecondaryItem

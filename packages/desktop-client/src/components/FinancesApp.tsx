@@ -26,6 +26,7 @@ import { useMultiuserEnabled } from './ServerContext';
 import { Settings } from './settings';
 import { FloatableSidebar } from './sidebar';
 import { ManageTagsPage } from './tags/ManageTagsPage';
+import { CategoryGroupsPage } from './category-groups/CategoryGroupsPage';
 import { Titlebar } from './Titlebar';
 
 import { getLatestAppVersion, sync } from '@desktop-client/app/appSlice';
@@ -291,6 +292,7 @@ export function FinancesApp() {
                   }
                 />
                 <Route path="/tags" element={<ManageTagsPage />} />
+                <Route path="/category-groups" element={<CategoryGroupsPage />} />
                 <Route path="/settings" element={<Settings />} />
 
                 <Route

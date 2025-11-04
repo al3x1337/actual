@@ -11,6 +11,7 @@ import { Trans, useTranslation } from 'react-i18next';
 
 import {
   SvgCog,
+  SvgFolder,
   SvgLibrary,
   SvgPiggyBank,
   SvgReports,
@@ -126,6 +127,7 @@ export function CommandBar() {
       { id: 'payees', name: t('Payees'), path: '/payees', Icon: SvgStoreFront },
       { id: 'rules', name: t('Rules'), path: '/rules', Icon: SvgTuning },
       { id: 'tags', name: t('Tags'), path: '/tags', Icon: SvgTag },
+      { id: 'category-groups', name: t('Category Groups'), path: '/category-groups', Icon: SvgFolder },
       { id: 'settings', name: t('Settings'), path: '/settings', Icon: SvgCog },
       {
         id: 'accounts',
