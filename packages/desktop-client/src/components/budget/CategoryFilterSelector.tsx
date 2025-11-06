@@ -315,7 +315,7 @@ export function CategoryFilterSelector({
             isSelected={isSelected}
             onToggle={() => handleLabelToggle(label.id)}
             activeBudgetType={activeBudgetType}
-            format={format}
+            format={(value: unknown, type?: string) => format(value, type as any)}
             t={t}
           />
         );

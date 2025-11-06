@@ -1,4 +1,4 @@
-import React, { useCallback, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 
 import { Button } from '@actual-app/components/button';
@@ -46,6 +46,9 @@ export function EditCategoryGroupModal({
   
   // Track last clicked category for shift+click functionality
   const lastClickedCategoryRef = useRef<{ groupId: string; categoryIndex: number } | null>(null);
+  
+  // Refs for group checkboxes to set indeterminate state
+  const groupCheckboxRefs = useRef<Record<string, HTMLInputElement | null>>({});
   
   // Get all categories flattened with their group and index for shift+click
   const allCategoriesWithIndex = categoryGroups.flatMap(group =>
@@ -172,6 +175,16 @@ export function EditCategoryGroupModal({
     return selectedCount > 0 && selectedCount < group.categories.length;
   };
 
+  // Update indeterminate state for all group checkboxes
+  useEffect(() => {
+    categoryGroups.forEach(group => {
+      const checkbox = groupCheckboxRefs.current[group.id];
+      if (checkbox) {
+        checkbox.indeterminate = isGroupIndeterminate(group.id);
+      }
+    });
+  }, [categoryGroups, selectedCategoryIds]);
+
   const handleSave = useCallback(() => {
     const newMap = categoryLabelMap ? { ...categoryLabelMap } : {};
     
@@ -257,7 +270,8 @@ export function EditCategoryGroupModal({
               }}
             >
               <View style={{ gap: 20, paddingBottom: 8 }}>
-                {categoryGroups.map(group => (
+                {categoryGroups.map(group => {
+                  return (
                   <View key={group.id} style={{ flexShrink: 0 }}>
                     <label
                       key={`group-${group.id}-${Array.from(selectedCategoryIds).length}`}
@@ -275,8 +289,10 @@ export function EditCategoryGroupModal({
                       }}
                     >
                       <Checkbox
+                        ref={el => {
+                          groupCheckboxRefs.current[group.id] = el;
+                        }}
                         checked={isGroupSelected(group.id)}
-                        indeterminate={isGroupIndeterminate(group.id)}
                         onChange={() => {
                           // Controlled by label onClick
                         }}
@@ -336,7 +352,8 @@ export function EditCategoryGroupModal({
                       ))}
                     </View>
                   </View>
-                ))}
+                  );
+                })}
               </View>
             </View>
           </View>

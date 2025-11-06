@@ -24,6 +24,7 @@ packages/desktop-electron/.electron-symbols
 packages/desktop-electron/dist
 packages/desktop-electron/loot-core
 packages/desktop-client/service-worker
+desktop-client/service-worker
 packages/plugins-service/dist
 bundle.desktop.js
 bundle.desktop.js.map
@@ -65,3 +66,8 @@ build/
 
 # Lage cache
 .lage/
+
+# Build artifacts
+desktop-client/public/kcab/
+desktop-client/public/sql-wasm.wasm
+desktop-client/public/data-file-index.txt
