@@ -555,10 +555,10 @@ export type Modal =
       };
     }
   | {
-      name: 'edit-category-group';
+      name: 'edit-budget-view';
       options: {
-        labelId: string;
-        labelName: string;
+        viewId: string;
+        viewName: string;
         assignedCategoryIds: string[];
         allCategories: CategoryEntity[];
       };

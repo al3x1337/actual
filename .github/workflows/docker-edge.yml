@@ -102,3 +102,12 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           build-args: |
             GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }}
+          outputs: type=dockerbuild,dest=${{ runner.temp }}/build-${{ matrix.os }}.dockerbuild
+
+      - name: Upload dockerbuild artifact
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: dockerbuild-${{ matrix.os }}
+          path: ${{ runner.temp }}/build-${{ matrix.os }}.dockerbuild
+          retention-days: 30

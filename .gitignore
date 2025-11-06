@@ -71,3 +71,7 @@ build/
 desktop-client/public/kcab/
 desktop-client/public/sql-wasm.wasm
 desktop-client/public/data-file-index.txt
+
+# Docker build artifacts
+*.dockerbuild
+*.dockerbuild.zip

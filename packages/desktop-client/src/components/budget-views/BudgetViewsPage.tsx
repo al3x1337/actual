@@ -1,20 +1,18 @@
-import React from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { CategoryGroups } from './CategoryGroups';
+import { BudgetViews } from './BudgetViews';
 
 import { Page } from '@desktop-client/components/Page';
 
-export function CategoryGroupsPage() {
+export function BudgetViewsPage() {
   const { t } = useTranslation();
 
   return (
     <Page
-      header={t('Category Groups')}
+      header={t('Budget Views')}
       style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
     >
-      <CategoryGroups />
+      <BudgetViews />
     </Page>
   );
 }
-

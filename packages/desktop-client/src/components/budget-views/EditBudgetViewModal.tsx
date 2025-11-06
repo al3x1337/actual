@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 
 import { Button } from '@actual-app/components/button';
@@ -8,48 +8,51 @@ import { View } from '@actual-app/components/view';
 
 import { type CategoryEntity } from 'loot-core/types/models';
 
-import { useCategories } from '@desktop-client/hooks/useCategories';
-import { useLocalPref } from '@desktop-client/hooks/useLocalPref';
 import {
   Modal,
-  ModalButtons,
   ModalHeader,
   ModalTitle,
   ModalCloseButton,
 } from '@desktop-client/components/common/Modal';
 import { Checkbox } from '@desktop-client/components/forms';
+import { useCategories } from '@desktop-client/hooks/useCategories';
+import { useSyncedPrefJson } from '@desktop-client/hooks/useSyncedPrefJson';
 import { popModal } from '@desktop-client/modals/modalsSlice';
 import { useDispatch } from '@desktop-client/redux';
 
-type EditCategoryGroupModalProps = {
-  labelId: string;
-  labelName: string;
+type EditBudgetViewModalProps = {
+  viewId: string;
+  viewName: string;
   assignedCategoryIds: string[];
   allCategories: CategoryEntity[];
 };
 
-export function EditCategoryGroupModal({
-  labelId,
-  labelName,
+export function EditBudgetViewModal({
+  viewId,
+  viewName,
   assignedCategoryIds: initialAssignedIds,
-}: EditCategoryGroupModalProps) {
+}: EditBudgetViewModalProps) {
   const { t } = useTranslation();
   const dispatch = useDispatch();
   const { grouped: categoryGroups } = useCategories();
-  const [categoryLabelMap = {}, setCategoryLabelMapPref] = useLocalPref(
-    'budget.categoryLabelMap',
-  );
-  
+  const [budgetViewMap = {}, setBudgetViewMapPref] = useSyncedPrefJson<
+    'budget.budgetViewMap',
+    Record<string, string[]>
+  >('budget.budgetViewMap', {});
+
   const [selectedCategoryIds, setSelectedCategoryIds] = useState<Set<string>>(
     new Set(initialAssignedIds),
   );
-  
+
   // Track last clicked category for shift+click functionality
-  const lastClickedCategoryRef = useRef<{ groupId: string; categoryIndex: number } | null>(null);
-  
+  const lastClickedCategoryRef = useRef<{
+    groupId: string;
+    categoryIndex: number;
+  } | null>(null);
+
   // Refs for group checkboxes to set indeterminate state
   const groupCheckboxRefs = useRef<Record<string, HTMLInputElement | null>>({});
-  
+
   // Get all categories flattened with their group and index for shift+click
   const allCategoriesWithIndex = categoryGroups.flatMap(group =>
     (group.categories || []).map((category, index) => ({
@@ -60,14 +63,14 @@ export function EditCategoryGroupModal({
   );
 
   const toggleCategory = useCallback(
-    (categoryId: string, event?: React.MouseEvent) => {
+    (categoryId: string, event?: React.MouseEvent<HTMLElement>) => {
       const isShiftClick = event?.shiftKey || false;
       const isCtrlClick = event?.ctrlKey || event?.metaKey || false;
-      
+
       setSelectedCategoryIds(prev => {
         const next = new Set(prev);
         const wasSelected = prev.has(categoryId);
-        
+
         if (isShiftClick && lastClickedCategoryRef.current) {
           // Shift+Click: Select/deselect range based on last clicked category
           const currentIndex = allCategoriesWithIndex.findIndex(
@@ -76,7 +79,8 @@ export function EditCategoryGroupModal({
           const lastIndex = allCategoriesWithIndex.findIndex(
             item =>
               item.groupId === lastClickedCategoryRef.current?.groupId &&
-              item.categoryIndex === lastClickedCategoryRef.current?.categoryIndex,
+              item.categoryIndex ===
+                lastClickedCategoryRef.current?.categoryIndex,
           );
 
           if (currentIndex !== -1 && lastIndex !== -1) {
@@ -89,7 +93,7 @@ export function EditCategoryGroupModal({
             const lastWasSelected = prev.has(
               allCategoriesWithIndex[lastIndex].category.id,
             );
-            
+
             // Select or deselect all in range
             range.forEach(item => {
               if (lastWasSelected) {
@@ -163,7 +167,10 @@ export function EditCategoryGroupModal({
     const group = categoryGroups.find(g => g.id === groupId);
     if (!group?.categories || group.categories.length === 0) return false;
     const groupCategoryIds = group.categories.map(cat => cat.id);
-    return groupCategoryIds.length > 0 && groupCategoryIds.every(id => selectedCategoryIds.has(id));
+    return (
+      groupCategoryIds.length > 0 &&
+      groupCategoryIds.every(id => selectedCategoryIds.has(id))
+    );
   };
 
   const isGroupIndeterminate = (groupId: string) => {
@@ -186,32 +193,38 @@ export function EditCategoryGroupModal({
   }, [categoryGroups, selectedCategoryIds]);
 
   const handleSave = useCallback(() => {
-    const newMap = categoryLabelMap ? { ...categoryLabelMap } : {};
-    
-    // Remove label from all categories first
+    const newMap = budgetViewMap ? { ...budgetViewMap } : {};
+
+    // Remove view from all categories first
     Object.keys(newMap).forEach(categoryId => {
-      const labelIds = newMap[categoryId];
-      if (Array.isArray(labelIds)) {
-        newMap[categoryId] = labelIds.filter(id => id !== labelId);
+      const viewIds = newMap[categoryId];
+      if (Array.isArray(viewIds)) {
+        newMap[categoryId] = viewIds.filter(id => id !== viewId);
         if (newMap[categoryId].length === 0) {
           delete newMap[categoryId];
         }
       }
     });
 
-    // Add label to selected categories
+    // Add view to selected categories
     selectedCategoryIds.forEach(categoryId => {
       if (!newMap[categoryId]) {
         newMap[categoryId] = [];
       }
-      if (!newMap[categoryId].includes(labelId)) {
-        newMap[categoryId].push(labelId);
+      if (!newMap[categoryId].includes(viewId)) {
+        newMap[categoryId].push(viewId);
       }
     });
 
-    setCategoryLabelMapPref(newMap);
+    setBudgetViewMapPref(newMap);
     dispatch(popModal());
-  }, [categoryLabelMap, dispatch, labelId, selectedCategoryIds, setCategoryLabelMapPref]);
+  }, [
+    budgetViewMap,
+    dispatch,
+    viewId,
+    selectedCategoryIds,
+    setBudgetViewMapPref,
+  ]);
 
   const handleCancel = useCallback(() => {
     dispatch(popModal());
@@ -219,7 +232,7 @@ export function EditCategoryGroupModal({
 
   return (
     <Modal
-      name="edit-category-group"
+      name="edit-budget-view"
       containerProps={{
         style: {
           maxWidth: '800px',
@@ -235,7 +248,7 @@ export function EditCategoryGroupModal({
           <ModalHeader
             title={
               <ModalTitle
-                title={t('Edit Category Group: {{name}}', { name: labelName })}
+                title={t('Edit Budget View: {{name}}', { name: viewName })}
                 shrinkOnOverflow
               />
             }
@@ -258,7 +271,7 @@ export function EditCategoryGroupModal({
                 flexShrink: 0,
               }}
             >
-              <Trans>Select categories to include in this group:</Trans>
+              <Trans>Select categories to include in this view:</Trans>
             </Text>
 
             <View
@@ -272,86 +285,86 @@ export function EditCategoryGroupModal({
               <View style={{ gap: 20, paddingBottom: 8 }}>
                 {categoryGroups.map(group => {
                   return (
-                  <View key={group.id} style={{ flexShrink: 0 }}>
-                    <label
-                      key={`group-${group.id}-${Array.from(selectedCategoryIds).length}`}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        cursor: 'pointer',
-                        marginBottom: 10,
-                        flexShrink: 0,
-                      }}
-                      onClick={e => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        toggleGroup(group.id);
-                      }}
-                    >
-                      <Checkbox
-                        ref={el => {
-                          groupCheckboxRefs.current[group.id] = el;
-                        }}
-                        checked={isGroupSelected(group.id)}
-                        onChange={() => {
-                          // Controlled by label onClick
-                        }}
-                        style={{ flexShrink: 0, marginRight: 8 }}
-                      />
-                      <Text
+                    <View key={group.id} style={{ flexShrink: 0 }}>
+                      <label
+                        key={`group-${group.id}-${Array.from(selectedCategoryIds).length}`}
                         style={{
-                          fontWeight: 600,
-                          fontSize: 14,
-                          color: theme.pageText,
+                          display: 'flex',
+                          alignItems: 'center',
+                          cursor: 'pointer',
+                          marginBottom: 10,
                           flexShrink: 0,
                         }}
+                        onClick={e => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          toggleGroup(group.id);
+                        }}
                       >
-                        {group.name}
-                      </Text>
-                    </label>
-                    <View style={{ paddingLeft: 20, gap: 6 }}>
-                      {group.categories?.map(category => (
-                        <label
-                          key={category.id}
+                        <Checkbox
+                          ref={el => {
+                            groupCheckboxRefs.current[group.id] = el;
+                          }}
+                          checked={isGroupSelected(group.id)}
+                          onChange={() => {
+                            // Controlled by label onClick
+                          }}
+                          style={{ flexShrink: 0, marginRight: 8 }}
+                        />
+                        <Text
                           style={{
-                            display: 'flex',
-                            alignItems: 'flex-start',
-                            cursor: 'pointer',
-                            padding: '6px 0',
-                            minHeight: 28,
-                            width: '100%',
+                            fontWeight: 600,
+                            fontSize: 14,
+                            color: theme.pageText,
                             flexShrink: 0,
                           }}
-                          onClick={e => {
-                            e.stopPropagation();
-                            toggleCategory(category.id, e);
-                          }}
                         >
-                          <Checkbox
-                            checked={selectedCategoryIds.has(category.id)}
-                            onChange={() => {
-                              // Controlled by label onClick
-                            }}
-                            style={{ flexShrink: 0, marginTop: 2 }}
-                          />
-                          <Text
+                          {group.name}
+                        </Text>
+                      </label>
+                      <View style={{ paddingLeft: 20, gap: 6 }}>
+                        {group.categories?.map(category => (
+                          <label
+                            key={category.id}
                             style={{
-                              marginLeft: 8,
-                              fontSize: 13,
-                              lineHeight: '20px',
-                              flex: 1,
-                              wordWrap: 'break-word',
-                              overflowWrap: 'break-word',
-                              whiteSpace: 'normal',
-                              minWidth: 0,
+                              display: 'flex',
+                              alignItems: 'flex-start',
+                              cursor: 'pointer',
+                              padding: '6px 0',
+                              minHeight: 28,
+                              width: '100%',
+                              flexShrink: 0,
+                            }}
+                            onClick={e => {
+                              e.stopPropagation();
+                              toggleCategory(category.id, e);
                             }}
                           >
-                            {category.name}
-                          </Text>
-                        </label>
-                      ))}
+                            <Checkbox
+                              checked={selectedCategoryIds.has(category.id)}
+                              onChange={() => {
+                                // Controlled by label onClick
+                              }}
+                              style={{ flexShrink: 0, marginTop: 2 }}
+                            />
+                            <Text
+                              style={{
+                                marginLeft: 8,
+                                fontSize: 13,
+                                lineHeight: '20px',
+                                flex: 1,
+                                wordWrap: 'break-word',
+                                overflowWrap: 'break-word',
+                                whiteSpace: 'normal',
+                                minWidth: 0,
+                              }}
+                            >
+                              {category.name}
+                            </Text>
+                          </label>
+                        ))}
+                      </View>
                     </View>
-                  </View>
                   );
                 })}
               </View>
@@ -385,4 +398,3 @@ export function EditCategoryGroupModal({
     </Modal>
   );
 }
-

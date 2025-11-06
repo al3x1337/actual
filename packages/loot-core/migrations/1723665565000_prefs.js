@@ -13,6 +13,8 @@ const SYNCED_PREF_KEYS = [
   /^ofx-fallback-missing-payee-/,
   /^flip-amount-/,
   'budgetType',
+  'budget.budgetViewMap',
+  'budget.customBudgetViews',
   /^flags\./,
 ];
 

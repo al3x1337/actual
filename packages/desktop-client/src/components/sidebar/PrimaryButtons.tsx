@@ -22,6 +22,7 @@ import * as Platform from 'loot-core/shared/platform';
 import { Item } from './Item';
 import { SecondaryItem } from './SecondaryItem';
 
+import { useFeatureFlag } from '@desktop-client/hooks/useFeatureFlag';
 import { useSyncServerStatus } from '@desktop-client/hooks/useSyncServerStatus';
 
 export function PrimaryButtons() {
@@ -33,6 +34,7 @@ export function PrimaryButtons() {
   const syncServerStatus = useSyncServerStatus();
   const isUsingServer =
     syncServerStatus !== 'no-server' || Platform.isPlaywright;
+  const budgetViewsEnabled = useFeatureFlag('budgetViews');
 
   const isActive = [
     '/payees',
@@ -40,7 +42,7 @@ export function PrimaryButtons() {
     '/bank-sync',
     '/settings',
     '/tools',
-    '/category-groups',
+    ...(budgetViewsEnabled ? ['/budget-views'] : []),
   ].some(route => location.pathname.startsWith(route));
 
   useEffect(() => {
@@ -89,12 +91,14 @@ export function PrimaryButtons() {
             to="/tags"
             indent={15}
           />
-          <SecondaryItem
-            title={t('Category Groups')}
-            Icon={SvgFolder}
-            to="/category-groups"
-            indent={15}
-          />
+          {budgetViewsEnabled && (
+            <SecondaryItem
+              title={t('Budget Views')}
+              Icon={SvgFolder}
+              to="/budget-views"
+              indent={15}
+            />
+          )}
           <SecondaryItem
             title={t('Settings')}
             Icon={SvgCog}

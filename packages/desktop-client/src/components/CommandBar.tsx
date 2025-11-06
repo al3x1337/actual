@@ -33,6 +33,7 @@ import { Command } from 'cmdk';
 import { CellValue, CellValueText } from './spreadsheet/CellValue';
 
 import { useAccounts } from '@desktop-client/hooks/useAccounts';
+import { useFeatureFlag } from '@desktop-client/hooks/useFeatureFlag';
 import { useMetadataPref } from '@desktop-client/hooks/useMetadataPref';
 import { useModalState } from '@desktop-client/hooks/useModalState';
 import { useNavigate } from '@desktop-client/hooks/useNavigate';
@@ -109,6 +110,7 @@ export function CommandBar() {
   const [budgetName] = useMetadataPref('budgetName');
   const { modalStack } = useModalState();
 
+  const budgetViewsEnabled = useFeatureFlag('budgetViews');
   const navigationItems = useMemo(
     () => [
       { id: 'budget', name: t('Budget'), path: '/budget', Icon: SvgWallet },
@@ -127,7 +129,16 @@ export function CommandBar() {
       { id: 'payees', name: t('Payees'), path: '/payees', Icon: SvgStoreFront },
       { id: 'rules', name: t('Rules'), path: '/rules', Icon: SvgTuning },
       { id: 'tags', name: t('Tags'), path: '/tags', Icon: SvgTag },
-      { id: 'category-groups', name: t('Category Groups'), path: '/category-groups', Icon: SvgFolder },
+      ...(budgetViewsEnabled
+        ? [
+            {
+              id: 'budget-views',
+              name: t('Budget Views'),
+              path: '/budget-views',
+              Icon: SvgFolder,
+            },
+          ]
+        : []),
       { id: 'settings', name: t('Settings'), path: '/settings', Icon: SvgCog },
       {
         id: 'accounts',

@@ -85,6 +85,15 @@ jobs:
           file: packages/sync-server/docker/ubuntu.Dockerfile
           platforms: linux/amd64,linux/arm64,linux/arm/v7
           tags: ${{ steps.meta.outputs.tags }}
+          outputs: type=dockerbuild,dest=${{ runner.temp }}/build-ubuntu.dockerbuild
+
+      - name: Upload dockerbuild artifact (ubuntu)
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: dockerbuild-ubuntu
+          path: ${{ runner.temp }}/build-ubuntu.dockerbuild
+          retention-days: 30
 
       - name: Build and push alpine image
         uses: docker/build-push-action@v6
@@ -94,3 +103,12 @@ jobs:
           file: packages/sync-server/docker/alpine.Dockerfile
           platforms: linux/amd64,linux/arm64,linux/arm/v7,linux/arm/v6
           tags: ${{ steps.alpine-meta.outputs.tags }}
+          outputs: type=dockerbuild,dest=${{ runner.temp }}/build-alpine.dockerbuild
+
+      - name: Upload dockerbuild artifact (alpine)
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: dockerbuild-alpine
+          path: ${{ runner.temp }}/build-alpine.dockerbuild
+          retention-days: 30
