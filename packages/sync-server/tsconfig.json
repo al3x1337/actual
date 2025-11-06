@@ -15,5 +15,5 @@
     "app.ts",
     "bin/**/*"
   ],
-  "exclude": ["node_modules", "build", "coverage"]
+  "exclude": ["node_modules", "build", "coverage", "**/*.test.ts", "**/*.test.js"]
 }
