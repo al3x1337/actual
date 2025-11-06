@@ -1,22 +1,28 @@
 import React, { useContext, useEffect, useMemo, useRef, useState } from 'react';
-import { useTranslation } from 'react-i18next';
+import { useTranslation, Trans } from 'react-i18next';
 
 import { Button } from '@actual-app/components/button';
-import { Tooltip } from '@actual-app/components/tooltip';
 import { Text } from '@actual-app/components/text';
 import { theme } from '@actual-app/components/theme';
+import { Tooltip } from '@actual-app/components/tooltip';
 import { View } from '@actual-app/components/view';
 
 import * as monthUtils from 'loot-core/shared/months';
 import { type CategoryEntity } from 'loot-core/types/models';
 
+import { MonthsContext } from './MonthsContext';
+import { getScrollbarWidth } from './util';
+
+import { useFeatureFlag } from '@desktop-client/hooks/useFeatureFlag';
 import { useFormat } from '@desktop-client/hooks/useFormat';
 import { useLocalPref } from '@desktop-client/hooks/useLocalPref';
 import { useSpreadsheet } from '@desktop-client/hooks/useSpreadsheet';
 import { useSyncedPref } from '@desktop-client/hooks/useSyncedPref';
-import { envelopeBudget, trackingBudget } from '@desktop-client/spreadsheet/bindings';
-import { MonthsContext } from './MonthsContext';
-import { getScrollbarWidth } from './util';
+import { useSyncedPrefJson } from '@desktop-client/hooks/useSyncedPrefJson';
+import {
+  envelopeBudget,
+  trackingBudget,
+} from '@desktop-client/spreadsheet/bindings';
 
 type CategoryFilterSelectorProps = {
   categoryGroups: Array<{
@@ -27,19 +33,18 @@ type CategoryFilterSelectorProps = {
   onFilterChange: (filteredCategoryIds: string[] | null) => void;
 };
 
-type CategoryLabel = {
+type BudgetView = {
   id: string;
   name: string;
 };
 
 type LabelButtonProps = {
-  label: CategoryLabel;
+  label: BudgetView;
   categoryIds: string[];
   isSelected: boolean;
   onToggle: () => void;
   activeBudgetType: string;
-  format: (value: unknown, type?: string) => string;
-  t: (key: string) => string;
+  format: (value: unknown, type?: 'string' | 'number' | 'percentage' | 'financial' | 'financial-with-sign' | 'financial-no-decimals') => string;
 };
 
 function LabelButton({
@@ -49,15 +54,18 @@ function LabelButton({
   onToggle,
   activeBudgetType,
   format,
-  t,
 }: LabelButtonProps) {
   const spreadsheet = useSpreadsheet();
   const { months } = useContext(MonthsContext);
   const currentMonth = months?.[0] || '';
   const sheetName = monthUtils.sheetForMonth(currentMonth);
-  
-  const [stats, setStats] = useState({ budgeted: 0, spent: 0, count: categoryIds.length });
-  
+
+  const [stats, setStats] = useState({
+    budgeted: 0,
+    spent: 0,
+    count: categoryIds.length,
+  });
+
   // Bind to all category values using useEffect
   useEffect(() => {
     if (categoryIds.length === 0 || !sheetName) {
@@ -70,26 +78,54 @@ function LabelButton({
     const unbindList: (() => void)[] = [];
 
     categoryIds.forEach(categoryId => {
-      const budgetBinding = activeBudgetType === 'envelope'
-        ? envelopeBudget.catBudgeted(categoryId)
-        : trackingBudget.catBudgeted(categoryId);
-      const spentBinding = activeBudgetType === 'envelope'
-        ? envelopeBudget.catSumAmount(categoryId)
-        : trackingBudget.catSumAmount(categoryId);
+      const budgetBinding =
+        activeBudgetType === 'envelope'
+          ? envelopeBudget.catBudgeted(categoryId)
+          : trackingBudget.catBudgeted(categoryId);
+      const spentBinding =
+        activeBudgetType === 'envelope'
+          ? envelopeBudget.catSumAmount(categoryId)
+          : trackingBudget.catSumAmount(categoryId);
 
-      const unbindBudget = spreadsheet.bind(sheetName, budgetBinding, result => {
-        budgetValues[categoryId] = typeof result.value === 'number' ? result.value : 0;
-        const total = Object.values(budgetValues).reduce((sum, val) => sum + val, 0);
-        const totalSpent = Object.values(spentValues).reduce((sum, val) => sum + val, 0);
-        setStats({ budgeted: total, spent: totalSpent, count: categoryIds.length });
-      });
+      const unbindBudget = spreadsheet.bind(
+        sheetName,
+        budgetBinding,
+        result => {
+          budgetValues[categoryId] =
+            typeof result.value === 'number' ? result.value : 0;
+          const total = Object.values(budgetValues).reduce(
+            (sum, val) => sum + val,
+            0,
+          );
+          const totalSpent = Object.values(spentValues).reduce(
+            (sum, val) => sum + val,
+            0,
+          );
+          setStats({
+            budgeted: total,
+            spent: totalSpent,
+            count: categoryIds.length,
+          });
+        },
+      );
       unbindList.push(unbindBudget);
 
       const unbindSpent = spreadsheet.bind(sheetName, spentBinding, result => {
-        spentValues[categoryId] = typeof result.value === 'number' ? result.value : 0;
-        const total = Object.values(budgetValues).reduce((sum, val) => sum + val, 0);
-        const totalSpent = Object.values(spentValues).reduce((sum, val) => sum + val, 0);
-        setStats({ budgeted: total, spent: totalSpent, count: categoryIds.length });
+        spentValues[categoryId] =
+          typeof result.value === 'number' ? result.value : 0;
+        const total = Object.values(budgetValues).reduce(
+          (sum, val) => sum + val,
+          0,
+        );
+        const totalSpent = Object.values(spentValues).reduce(
+          (sum, val) => sum + val,
+          0,
+        );
+        setStats({
+          budgeted: total,
+          spent: totalSpent,
+          count: categoryIds.length,
+        });
       });
       unbindList.push(unbindSpent);
     });
@@ -100,23 +136,54 @@ function LabelButton({
   }, [categoryIds, sheetName, activeBudgetType, spreadsheet]);
 
   const balance = stats.budgeted + stats.spent;
-  const count = stats.count;
 
   const tooltipContent = (
     <View style={{ padding: 8, minWidth: 200 }}>
       <Text style={{ fontWeight: 600, marginBottom: 8 }}>{label.name}</Text>
       <View style={{ gap: 4 }}>
-        <View style={{ display: 'flex', flexDirection: 'row', justifyContent: 'space-between' }}>
-          <Text style={{ color: theme.pageTextLight }}>{t('Budgeted:')}</Text>
-          <Text style={{ fontWeight: 500 }}>{format(stats.budgeted, 'financial')}</Text>
+        <View
+          style={{
+            display: 'flex',
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+          }}
+        >
+          <Text style={{ color: theme.pageTextLight }}><Trans>Budgeted:</Trans></Text>
+          <Text style={{ fontWeight: 500 }}>
+            {format(stats.budgeted, 'financial')}
+          </Text>
         </View>
-        <View style={{ display: 'flex', flexDirection: 'row', justifyContent: 'space-between' }}>
-          <Text style={{ color: theme.pageTextLight }}>{t('Spent:')}</Text>
-          <Text style={{ fontWeight: 500 }}>{format(stats.spent, 'financial')}</Text>
+        <View
+          style={{
+            display: 'flex',
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+          }}
+        >
+          <Text style={{ color: theme.pageTextLight }}><Trans>Spent:</Trans></Text>
+          <Text style={{ fontWeight: 500 }}>
+            {format(stats.spent, 'financial')}
+          </Text>
         </View>
-        <View style={{ display: 'flex', flexDirection: 'row', justifyContent: 'space-between', borderTop: `1px solid ${theme.tableBorder}`, paddingTop: 4, marginTop: 4 }}>
-          <Text style={{ color: theme.pageTextLight, fontWeight: 600 }}>{t('Balance:')}</Text>
-          <Text style={{ fontWeight: 600, color: balance < 0 ? theme.errorText : theme.pageText }}>
+        <View
+          style={{
+            display: 'flex',
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            borderTop: `1px solid ${theme.tableBorder}`,
+            paddingTop: 4,
+            marginTop: 4,
+          }}
+        >
+          <Text style={{ color: theme.pageTextLight, fontWeight: 600 }}>
+            <Trans>Balance:</Trans>
+          </Text>
+          <Text
+            style={{
+              fontWeight: 600,
+              color: balance < 0 ? theme.errorText : theme.pageText,
+            }}
+          >
             {format(balance, 'financial')}
           </Text>
         </View>
@@ -125,7 +192,7 @@ function LabelButton({
   );
 
   return (
-    <Tooltip content={tooltipContent} placement="bottom">
+    <Tooltip content={tooltipContent} placement="top">
       <Button
         variant="bare"
         onPress={onToggle}
@@ -151,70 +218,77 @@ export function CategoryFilterSelector({
   categoryGroups,
   onFilterChange,
 }: CategoryFilterSelectorProps) {
+  const budgetViewsEnabled = useFeatureFlag('budgetViews');
   const { t } = useTranslation();
   const format = useFormat();
-  const { months, type: budgetType } = useContext(MonthsContext);
-  const currentMonth = months?.[0] || '';
-  const [selectedLabels, setSelectedLabels] = useState<Set<string>>(new Set());
-  const [categoryLabelMap = {}, setCategoryLabelMapPref] = useLocalPref(
-    'budget.categoryLabelMap',
-  );
-  const [customLabels = []] = useLocalPref('budget.customCategoryLabels');
-  const [collapsedGroupIds = [], setCollapsedGroupIdsPref] = useLocalPref(
-    'budget.collapsed',
-  );
+  const { type: budgetType } = useContext(MonthsContext);
+
+  if (!budgetViewsEnabled) {
+    return null;
+  }
+  const [selectedViews, setSelectedViews] = useState<Set<string>>(new Set());
+  const [budgetViewMap = {}, setBudgetViewMapPref] = useSyncedPrefJson<
+    'budget.budgetViewMap',
+    Record<string, string[]>
+  >('budget.budgetViewMap', {});
+  const [customViews = []] = useSyncedPrefJson<
+    'budget.customBudgetViews',
+    Array<{ id: string; name: string }>
+  >('budget.customBudgetViews', []);
+  const [collapsedGroupIds = [], setCollapsedGroupIdsPref] =
+    useLocalPref('budget.collapsed');
   const [budgetTypePref = 'envelope'] = useSyncedPref('budgetType');
   const activeBudgetType = budgetType || budgetTypePref;
-  
+
   // Store the original collapsed state before filtering
   const originalCollapsedStateRef = useRef<string[] | null>(null);
 
-  const labels = useMemo(() => {
-    // Collect all label IDs that are actually in use (from categoryLabelMap)
-    const labelsInUse = new Set<string>();
-    Object.values(categoryLabelMap).forEach(labelIds => {
-      labelIds.forEach(labelId => labelsInUse.add(labelId));
+  const views = useMemo(() => {
+    // Collect all view IDs that are actually in use (from budgetViewMap)
+    const viewsInUse = new Set<string>();
+    Object.values(budgetViewMap).forEach(viewIds => {
+      viewIds.forEach(viewId => viewsInUse.add(viewId));
     });
 
-    // Include all custom labels that are in use
-    const allCustomLabels = Array.isArray(customLabels) ? customLabels : [];
+    // Include all custom views that are in use
+    const allCustomViews = Array.isArray(customViews) ? customViews : [];
 
-    // Remove duplicates by ID and only show labels that are in use
+    // Remove duplicates by ID and only show views that are in use
     const seen = new Set<string>();
-    return allCustomLabels.filter(label => {
-      if (seen.has(label.id)) {
+    return allCustomViews.filter(view => {
+      if (seen.has(view.id)) {
         return false;
       }
-      seen.add(label.id);
-      return labelsInUse.has(label.id);
+      seen.add(view.id);
+      return viewsInUse.has(view.id);
     });
-  }, [categoryLabelMap, customLabels]);
+  }, [budgetViewMap, customViews]);
 
-  // Calculate category IDs for each label
-  const labelCategoryIds = useMemo(() => {
+  // Calculate category IDs for each view
+  const viewCategoryIds = useMemo(() => {
     const map: Record<string, string[]> = {};
-    labels.forEach(label => {
+    views.forEach(view => {
       const ids: string[] = [];
-      Object.entries(categoryLabelMap).forEach(([categoryId, labelIds]) => {
-        if (Array.isArray(labelIds) && labelIds.includes(label.id)) {
+      Object.entries(budgetViewMap).forEach(([categoryId, viewIds]) => {
+        if (Array.isArray(viewIds) && viewIds.includes(view.id)) {
           ids.push(categoryId);
         }
       });
-      map[label.id] = ids;
+      map[view.id] = ids;
     });
     return map;
-  }, [labels, categoryLabelMap]);
+  }, [views, budgetViewMap]);
 
-  const handleLabelToggle = (labelId: string) => {
-    const newSelected = new Set(selectedLabels);
-    if (newSelected.has(labelId)) {
-      newSelected.delete(labelId);
+  const handleViewToggle = (viewId: string) => {
+    const newSelected = new Set(selectedViews);
+    if (newSelected.has(viewId)) {
+      newSelected.delete(viewId);
     } else {
-      newSelected.add(labelId);
+      newSelected.add(viewId);
     }
-    setSelectedLabels(newSelected);
+    setSelectedViews(newSelected);
 
-    // Find all categories that belong to the selected labels
+    // Find all categories that belong to the selected views
     if (newSelected.size === 0) {
       // Restore original collapsed state when clearing filters
       if (originalCollapsedStateRef.current !== null) {
@@ -229,11 +303,8 @@ export function CategoryFilterSelector({
       }
 
       const filteredCategoryIds = new Set<string>();
-      Object.entries(categoryLabelMap).forEach(([categoryId, labelIds]) => {
-        if (
-          Array.isArray(labelIds) &&
-          labelIds.some(id => newSelected.has(id))
-        ) {
+      Object.entries(budgetViewMap).forEach(([categoryId, viewIds]) => {
+        if (Array.isArray(viewIds) && viewIds.some(id => newSelected.has(id))) {
           filteredCategoryIds.add(categoryId);
         }
       });
@@ -260,30 +331,30 @@ export function CategoryFilterSelector({
     }
   };
 
-  // Function to assign a category to a label (can be called from a context menu or settings)
-  const assignCategoryToLabel = (
+  // Function to assign a category to a view (can be called from a context menu or settings)
+  const _assignCategoryToView = (
     categoryId: string,
-    labelId: string,
+    viewId: string,
     add: boolean,
   ) => {
-    const currentLabels = categoryLabelMap[categoryId] || [];
-    const updatedLabels = add
-      ? [...currentLabels, labelId].filter(
+    const currentViews = budgetViewMap[categoryId] || [];
+    const updatedViews = add
+      ? [...currentViews, viewId].filter(
           (id, index, arr) => arr.indexOf(id) === index,
         ) // Remove duplicates
-      : currentLabels.filter(id => id !== labelId);
+      : currentViews.filter(id => id !== viewId);
 
-    const newMap = Object.assign({}, categoryLabelMap || {});
-    if (updatedLabels.length === 0) {
+    const newMap = Object.assign({}, budgetViewMap || {});
+    if (updatedViews.length === 0) {
       delete newMap[categoryId];
     } else {
-      newMap[categoryId] = updatedLabels;
+      newMap[categoryId] = updatedViews;
     }
-    setCategoryLabelMapPref(newMap);
+    setBudgetViewMapPref(newMap);
   };
 
-  // Don't show the filter bar if no category groups are created or if none are in use
-  if (labels.length === 0) {
+  // Don't show the filter bar if no budget views are created or if none are in use
+  if (views.length === 0) {
     return null;
   }
 
@@ -304,27 +375,28 @@ export function CategoryFilterSelector({
         minWidth: 0,
       }}
     >
-      {labels.map(label => {
-        const isSelected = selectedLabels.has(label.id);
-        const categoryIds = labelCategoryIds[label.id] || [];
+      {views.map(view => {
+        const isSelected = selectedViews.has(view.id);
+        const categoryIds = viewCategoryIds[view.id] || [];
         return (
           <LabelButton
-            key={label.id}
-            label={label}
+            key={view.id}
+            label={view}
             categoryIds={categoryIds}
             isSelected={isSelected}
-            onToggle={() => handleLabelToggle(label.id)}
+            onToggle={() => handleViewToggle(view.id)}
             activeBudgetType={activeBudgetType}
-            format={(value: unknown, type?: string) => format(value, type as any)}
-            t={t}
+            format={(value: unknown, type) =>
+              format(value, type)
+            }
           />
         );
       })}
-      {selectedLabels.size > 0 && (
+      {selectedViews.size > 0 && (
         <Button
           variant="bare"
           onPress={() => {
-            setSelectedLabels(new Set());
+            setSelectedViews(new Set());
             // Restore original collapsed state when clearing filters
             if (originalCollapsedStateRef.current !== null) {
               setCollapsedGroupIdsPref(originalCollapsedStateRef.current);
@@ -341,10 +413,9 @@ export function CategoryFilterSelector({
             borderRadius: 4,
           }}
         >
-          {t('Clear filters')}
+          <Trans>Clear filters</Trans>
         </Button>
       )}
     </View>
   );
 }
-

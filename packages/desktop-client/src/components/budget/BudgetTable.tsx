@@ -17,9 +17,9 @@ import {
 } from 'loot-core/types/models';
 
 import { BudgetCategories } from './BudgetCategories';
-import { CategoryFilterSelector } from './CategoryFilterSelector';
 import { BudgetSummaries } from './BudgetSummaries';
 import { BudgetTotals } from './BudgetTotals';
+import { CategoryFilterSelector } from './CategoryFilterSelector';
 import { type MonthBounds, MonthsProvider } from './MonthsContext';
 import {
   findSortDown,

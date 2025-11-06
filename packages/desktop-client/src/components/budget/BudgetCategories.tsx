@@ -177,7 +177,10 @@ export const BudgetCategories = memo<BudgetCategoriesProps>(
             filteredCategoryIds.includes(cat.id),
           );
           // If no income categories match after filtering, don't show income section
-          if ((!incomeCategories || incomeCategories.length === 0) && !newCategoryForGroup) {
+          if (
+            (!incomeCategories || incomeCategories.length === 0) &&
+            !newCategoryForGroup
+          ) {
             // Skip income section - return items as is
             return items;
           }

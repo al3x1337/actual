@@ -1,7 +1,7 @@
 #!/usr/bin/env node
+const { execSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
-const { execSync } = require('child_process');
 
 const ROOT = __dirname;
 const LOOT_CORE_DIR = path.resolve(ROOT, '..');
@@ -26,12 +26,12 @@ if (fs.existsSync(copyMigrationsScript)) {
   // Fallback: copy migrations manually
   const migrationsDir = path.resolve(LOOT_CORE_DIR, 'migrations');
   const destMigrationsDir = path.resolve(DATA_DIR, 'migrations');
-  
+
   if (fs.existsSync(destMigrationsDir)) {
     fs.rmSync(destMigrationsDir, { recursive: true, force: true });
   }
   fs.mkdirSync(destMigrationsDir, { recursive: true });
-  
+
   if (fs.existsSync(migrationsDir)) {
     const files = fs.readdirSync(migrationsDir);
     for (const file of files) {
@@ -43,7 +43,7 @@ if (fs.existsSync(copyMigrationsScript)) {
       }
     }
   }
-  
+
   // Copy default-db.sqlite
   const defaultDb = path.resolve(LOOT_CORE_DIR, 'default-db.sqlite');
   if (fs.existsSync(defaultDb)) {
@@ -71,7 +71,7 @@ collectFiles(DATA_DIR);
 dataFiles.sort();
 fs.writeFileSync(
   path.resolve(PUBLIC_DIR, 'data-file-index.txt'),
-  dataFiles.join('\n') + '\n'
+  dataFiles.join('\n') + '\n',
 );
 
 // Clean out previous build files
@@ -100,13 +100,15 @@ if (isDev || isWatch) {
   if (!fs.existsSync(LIB_DIST_BROWSER)) {
     fs.mkdirSync(LIB_DIST_BROWSER, { recursive: true });
   }
-  
+
   // Create symlink (Windows requires special handling)
   try {
     if (process.platform === 'win32') {
       // On Windows, use junction or symlink
       try {
-        execSync(`mklink /J "${KCAB_DIR}" "${LIB_DIST_BROWSER}"`, { stdio: 'ignore' });
+        execSync(`mklink /J "${KCAB_DIR}" "${LIB_DIST_BROWSER}"`, {
+          stdio: 'ignore',
+        });
         // Verify the symlink was created
         if (!fs.existsSync(KCAB_DIR)) {
           throw new Error('Symlink creation failed');
@@ -121,7 +123,9 @@ if (isDev || isWatch) {
           }
         } catch {
           symlinkFailed = true;
-          console.warn('Warning: Could not create symlink, will copy files instead');
+          console.warn(
+            'Warning: Could not create symlink, will copy files instead',
+          );
         }
       }
     } else {
@@ -133,7 +137,9 @@ if (isDev || isWatch) {
         }
       } catch {
         symlinkFailed = true;
-        console.warn('Warning: Could not create symlink, will copy files instead');
+        console.warn(
+          'Warning: Could not create symlink, will copy files instead',
+        );
       }
     }
   } catch (error) {
@@ -144,13 +150,16 @@ if (isDev || isWatch) {
 }
 
 // Copy sql-wasm.wasm
-const sqlWasmSource = path.resolve(NODE_MODULES_DIR, '@jlongster/sql.js/dist/sql-wasm.wasm');
+const sqlWasmSource = path.resolve(
+  NODE_MODULES_DIR,
+  '@jlongster/sql.js/dist/sql-wasm.wasm',
+);
 if (fs.existsSync(sqlWasmSource)) {
   fs.copyFileSync(sqlWasmSource, path.resolve(PUBLIC_DIR, 'sql-wasm.wasm'));
 }
 
 // Run vite build
-const viteArgs = (isDev || isWatch) ? '--watch' : '';
+const viteArgs = isDev || isWatch ? '--watch' : '';
 const viteCmd = `yarn vite build --config ${path.resolve(LOOT_CORE_DIR, 'vite.config.ts')} --mode ${NODE_ENV} ${viteArgs}`;
 
 // Function to copy files from lib-dist/browser to kcab
@@ -158,7 +167,7 @@ function copyKcabFiles() {
   if (!fs.existsSync(KCAB_DIR)) {
     fs.mkdirSync(KCAB_DIR, { recursive: true });
   }
-  
+
   if (fs.existsSync(LIB_DIST_BROWSER)) {
     const files = fs.readdirSync(LIB_DIST_BROWSER);
     for (const file of files) {
@@ -204,14 +213,14 @@ if (!isDev && !isWatch) {
   if (!fs.existsSync(KCAB_DIR)) {
     fs.mkdirSync(KCAB_DIR, { recursive: true });
   }
-  
+
   if (fs.existsSync(LIB_DIST_BROWSER)) {
     const files = fs.readdirSync(LIB_DIST_BROWSER);
     for (const file of files) {
       const src = path.join(LIB_DIST_BROWSER, file);
       const dest = path.join(KCAB_DIR, file);
       const stat = fs.statSync(src);
-      
+
       if (stat.isDirectory()) {
         fs.cpSync(src, dest, { recursive: true });
       } else {

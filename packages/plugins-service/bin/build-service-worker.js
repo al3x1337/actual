@@ -1,7 +1,7 @@
 #!/usr/bin/env node
+const { execSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
-const { execSync } = require('child_process');
 
 const ROOT = __dirname;
 const PLUGINS_SERVICE_DIR = path.resolve(ROOT, '..');
@@ -32,14 +32,16 @@ if (isDev) {
   if (!fs.existsSync(DIST_DIR)) {
     fs.mkdirSync(DIST_DIR, { recursive: true });
   }
-  
+
   // Create symlink (Windows requires special handling)
   try {
     if (process.platform === 'win32') {
       // On Windows, use junction or symlink
       // Try junction first (works without admin), then symlink
       try {
-        execSync(`mklink /J "${SERVICE_WORKER_DIR}" "${DIST_DIR}"`, { stdio: 'ignore' });
+        execSync(`mklink /J "${SERVICE_WORKER_DIR}" "${DIST_DIR}"`, {
+          stdio: 'ignore',
+        });
       } catch {
         // Junction failed, try symlink (requires admin)
         fs.symlinkSync(DIST_DIR, SERVICE_WORKER_DIR, 'dir');
@@ -75,13 +77,13 @@ if (!isDev) {
   if (!fs.existsSync(SERVICE_WORKER_DIR)) {
     fs.mkdirSync(SERVICE_WORKER_DIR, { recursive: true });
   }
-  
+
   const files = fs.readdirSync(DIST_DIR);
   for (const file of files) {
     const src = path.join(DIST_DIR, file);
     const dest = path.join(SERVICE_WORKER_DIR, file);
     const stat = fs.statSync(src);
-    
+
     if (stat.isDirectory()) {
       fs.cpSync(src, dest, { recursive: true });
     } else {
@@ -93,13 +95,13 @@ if (!isDev) {
   if (!fs.existsSync(SERVICE_WORKER_DIR)) {
     fs.mkdirSync(SERVICE_WORKER_DIR, { recursive: true });
   }
-  
+
   const files = fs.readdirSync(DIST_DIR);
   for (const file of files) {
     const src = path.join(DIST_DIR, file);
     const dest = path.join(SERVICE_WORKER_DIR, file);
     const stat = fs.statSync(src);
-    
+
     if (stat.isDirectory()) {
       fs.cpSync(src, dest, { recursive: true });
     } else {

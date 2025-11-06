@@ -1,7 +1,7 @@
 #!/usr/bin/env node
+const { execSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
-const { execSync } = require('child_process');
 
 const ROOT = path.resolve(__dirname, '..');
 const BUILD_DIR = path.resolve(ROOT, 'build');
@@ -21,7 +21,9 @@ process.env.IS_GENERIC_BROWSER = '1';
 let workerHash = 'dev';
 if (fs.existsSync(KCAB_DIR)) {
   const files = fs.readdirSync(KCAB_DIR);
-  const workerFile = files.find(f => f.startsWith('kcab.worker.') && f.endsWith('.js'));
+  const workerFile = files.find(
+    f => f.startsWith('kcab.worker.') && f.endsWith('.js'),
+  );
   if (workerFile) {
     const match = workerFile.match(/kcab\.worker\.(.+)\.js/);
     if (match) {
@@ -54,7 +56,10 @@ const kcabStats = path.resolve(BUILD_DIR, 'kcab/stats.json');
 const webStats = path.resolve(ROOT, 'stats.json');
 
 if (fs.existsSync(kcabStats)) {
-  fs.copyFileSync(kcabStats, path.resolve(buildStatsDir, 'loot-core-stats.json'));
+  fs.copyFileSync(
+    kcabStats,
+    path.resolve(buildStatsDir, 'loot-core-stats.json'),
+  );
 }
 
 if (fs.existsSync(webStats)) {

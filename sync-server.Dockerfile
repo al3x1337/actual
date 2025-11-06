@@ -1,7 +1,7 @@
 FROM node:22-bookworm AS deps
 
-# Install required packages
-RUN apt-get update && apt-get install -y openssl
+# Install required packages (git needed for package-browser script)
+RUN apt-get update && apt-get install -y openssl git
 
 WORKDIR /app
 
@@ -18,7 +18,11 @@ COPY packages/loot-core/package.json packages/loot-core/package.json
 COPY packages/sync-server/package.json packages/sync-server/package.json
 COPY packages/plugins-service/package.json packages/plugins-service/package.json
 
-COPY ./bin/package-browser ./bin/package-browser
+COPY ./bin ./bin
+
+# Fix line endings for bash scripts (convert CRLF to LF) and make executable
+RUN find ./bin -type f -exec sed -i 's/\r$//' {} \; 2>/dev/null || true && \
+    chmod +x ./bin/package-browser ./bin/package-electron ./bin/docker-start ./bin/run-vrt
 
 RUN yarn install
 
@@ -28,9 +32,15 @@ WORKDIR /app
 
 COPY packages/ ./packages/
 
-# Increase memory limit for the build process to 8GB
-ENV NODE_OPTIONS=--max_old_space_size=8192
+# Fix line endings for bash scripts (convert CRLF to LF) and make executable
+RUN find ./bin -type f -name "*" -exec sed -i 's/\r$//' {} \; 2>/dev/null || true && \
+    find ./packages -type f -path "*/bin/*" -exec sed -i 's/\r$//' {} \; 2>/dev/null || true && \
+    chmod +x ./packages/desktop-client/bin/remove-untranslated-languages 2>/dev/null || true
 
+# Set memory limit for build process
+ENV NODE_OPTIONS=--max-old-space-size=8192
+
+# Run build - scripts with #!/bin/bash shebangs will use bash automatically
 RUN yarn build:server
 
 # Focus the workspaces in production mode (including @actual-app/web you just built)
