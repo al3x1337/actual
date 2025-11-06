@@ -1,12 +1,37 @@
 # PowerShell script to build and push Docker image to Docker Hub
-# Usage: .\build-and-push-docker.ps1 -DockerHubUsername "your-username" -Tag "latest"
+# Usage: 
+#   Interactive tag prompt: .\build-and-push-docker.ps1 -DockerHubUsername "your-username" -PromptForTag
+#   Basic (auto-prompts if no tag options): .\build-and-push-docker.ps1 -DockerHubUsername "your-username"
+#   Custom tag: .\build-and-push-docker.ps1 -DockerHubUsername "your-username" -Tag "v1.0.0"
+#   Timestamp tag: .\build-and-push-docker.ps1 -DockerHubUsername "your-username" -UseTimestamp
+#   Version tag: .\build-and-push-docker.ps1 -DockerHubUsername "your-username" -Version "1.0.0"
+#   Combined: .\build-and-push-docker.ps1 -DockerHubUsername "your-username" -Version "1.0.0" -UseTimestamp -TagSuffix "beta"
+#   No cache: .\build-and-push-docker.ps1 -DockerHubUsername "your-username" -Tag "latest" -NoCache
 
 param(
     [Parameter(Mandatory=$true)]
     [string]$DockerHubUsername,
     
     [Parameter(Mandatory=$false)]
-    [string]$Tag = "latest"
+    [string]$Tag,
+    
+    [Parameter(Mandatory=$false)]
+    [switch]$UseTimestamp,
+    
+    [Parameter(Mandatory=$false)]
+    [string]$Version,
+    
+    [Parameter(Mandatory=$false)]
+    [string]$TagSuffix,
+    
+    [Parameter(Mandatory=$false)]
+    [string]$TagPrefix,
+    
+    [Parameter(Mandatory=$false)]
+    [switch]$NoCache,
+    
+    [Parameter(Mandatory=$false)]
+    [switch]$PromptForTag
 )
 
 # Keep window open on error
@@ -26,13 +51,79 @@ trap {
     Exit-Script "Script terminated due to error" "Red"
 }
 
+# Determine the tag to use
+$finalTag = $null
+
+if ($PromptForTag -or (-not $Tag -and -not $UseTimestamp -and -not $Version)) {
+    # Prompt user for tag
+    Write-Host ""
+    Write-Host "Tag Options:" -ForegroundColor Cyan
+    Write-Host "  1. Enter custom tag" -ForegroundColor Yellow
+    Write-Host "  2. Use timestamp (format: YYYYMMDD-HHMMSS)" -ForegroundColor Yellow
+    Write-Host "  3. Use 'latest' (default)" -ForegroundColor Yellow
+    Write-Host ""
+    $tagChoice = Read-Host "Enter choice (1-3) or press Enter for 'latest'"
+    
+    if ($tagChoice -eq "1") {
+        $customTag = Read-Host "Enter custom tag"
+        if ([string]::IsNullOrWhiteSpace($customTag)) {
+            Write-Host "No tag entered, using 'latest'" -ForegroundColor Yellow
+            $finalTag = "latest"
+        } else {
+            $finalTag = $customTag.Trim()
+        }
+    } elseif ($tagChoice -eq "2") {
+        $timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
+        $finalTag = $timestamp
+        Write-Host "Using timestamp tag: $finalTag" -ForegroundColor Green
+    } else {
+        $finalTag = "latest"
+        Write-Host "Using default tag: $finalTag" -ForegroundColor Green
+    }
+} elseif ($Tag) {
+    # Explicit tag provided - use it
+    $finalTag = $Tag
+} elseif ($UseTimestamp -or $Version) {
+    # Build tag from components
+    $tagParts = @()
+    
+    if ($TagPrefix) {
+        $tagParts += $TagPrefix
+    }
+    
+    if ($Version) {
+        # Add 'v' prefix if version doesn't start with it
+        if ($Version -notmatch '^v') {
+            $tagParts += "v$Version"
+        } else {
+            $tagParts += $Version
+        }
+    }
+    
+    if ($UseTimestamp) {
+        # Generate timestamp in format: YYYYMMDD-HHMMSS
+        $timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
+        $tagParts += $timestamp
+    }
+    
+    if ($TagSuffix) {
+        $tagParts += $TagSuffix
+    }
+    
+    $finalTag = $tagParts -join "-"
+} else {
+    # Default to "latest"
+    $finalTag = "latest"
+}
+
 $ImageName = "$DockerHubUsername/actual-server-budget-views"
-$FullImageName = "$ImageName`:$Tag"
+$FullImageName = "$ImageName`:$finalTag"
 
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host "Docker Build and Push Script" -ForegroundColor Cyan
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host "Image: $FullImageName" -ForegroundColor Yellow
+Write-Host "Tag: $finalTag" -ForegroundColor Cyan
 Write-Host "Dockerfile: sync-server.Dockerfile" -ForegroundColor Yellow
 Write-Host ""
 
@@ -54,10 +145,19 @@ if (-not (Test-Path "sync-server.Dockerfile")) {
 }
 
 Write-Host "Building Docker image (this may take 10-20 minutes)..." -ForegroundColor Green
+if ($NoCache) {
+    Write-Host "Using --no-cache flag (forcing full rebuild)..." -ForegroundColor Yellow
+}
 Write-Host ""
 
 # Build with progress output - capture exit code properly
-$buildOutput = docker build -f sync-server.Dockerfile -t $FullImageName . 2>&1
+$buildArgs = @("-f", "sync-server.Dockerfile", "-t", $FullImageName)
+if ($NoCache) {
+    $buildArgs += "--no-cache"
+}
+$buildArgs += "."
+
+$buildOutput = docker build $buildArgs 2>&1
 $buildExitCode = $LASTEXITCODE
 
 # Display output
