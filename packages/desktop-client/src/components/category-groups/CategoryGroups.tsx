@@ -4,7 +4,7 @@ import { Trans, useTranslation } from 'react-i18next';
 import { Button } from '@actual-app/components/button';
 import { SvgAdd, SvgEditPencil } from '@actual-app/components/icons/v1';
 import { SvgDelete } from '@actual-app/components/icons/v0';
-import { Stack } from '@actual-app/components/stack';
+import { SpaceBetween } from '@actual-app/components/space-between';
 import { Text } from '@actual-app/components/text';
 import { theme } from '@actual-app/components/theme';
 import { View } from '@actual-app/components/view';
@@ -198,7 +198,7 @@ export function CategoryGroups() {
                     </Trans>
                   </Text>
                 </View>
-                <Stack direction="row" spacing={2}>
+                <SpaceBetween direction="horizontal" gap={2}>
                   <Button
                     variant="bare"
                     onPress={() => handleEdit(label.id)}
@@ -213,7 +213,7 @@ export function CategoryGroups() {
                   >
                     <SvgDelete width={14} height={14} />
                   </Button>
-                </Stack>
+                </SpaceBetween>
               </View>
             ))}
           </View>
