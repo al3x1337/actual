@@ -87,10 +87,10 @@
   },
   "scripts": {
     "start": "cross-env PORT=3001 vite",
-    "start:browser": "cross-env ./bin/watch-browser",
+    "start:browser": "cross-env node ./bin/watch-browser.js",
     "watch": "cross-env BROWSER=none yarn start",
     "build": "vite build",
-    "build:browser": "cross-env ./bin/build-browser",
+    "build:browser": "cross-env node ./bin/build-browser.js",
     "generate:i18n": "i18next",
     "test": "vitest --run",
     "e2e": "npx playwright test --browser=chromium",

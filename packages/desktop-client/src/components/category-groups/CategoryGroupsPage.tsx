@@ -9,7 +9,10 @@ export function CategoryGroupsPage() {
   const { t } = useTranslation();
 
   return (
-    <Page header={t('Category Groups')}>
+    <Page
+      header={t('Category Groups')}
+      style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
+    >
       <CategoryGroups />
     </Page>
   );

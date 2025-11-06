@@ -166,8 +166,70 @@ async function _copySqlFile(
 
   const { store } = await idb.getStore(await idb.getDatabase(), 'files');
   await idb.set(store, { filepath: topath, contents: '' });
+  
+  // For files not in /documents (like /default-db.sqlite), they're stored in regular FS
+  // and won't have an IndexedDB entry. We need to read from FS and copy to BlockedFS.
+  let fromDbPath: string;
   const fromitem = await idb.get(store, frompath);
-  const fromDbPath = pathToId(fromitem.filepath);
+  
+  // Check if file exists in IndexedDB and has a valid filepath property
+  // Added defensive check to prevent "Cannot read properties of undefined" error
+  if (fromitem != null && typeof fromitem === 'object' && 'filepath' in fromitem) {
+    const filepathValue = (fromitem as { filepath?: string }).filepath;
+    if (filepathValue) {
+      // File is in IndexedDB (in /documents), use its filepath
+      fromDbPath = pathToId(filepathValue);
+    } else {
+      // Filepath exists but is empty/null, treat as not in IndexedDB
+      // Fall through to else block
+      if (!_exists(frompath)) {
+        throw new Error(`Source file ${frompath} does not exist in filesystem`);
+      }
+      fromDbPath = pathToId(frompath);
+      try {
+        const contents = FS.readFile(resolveLink(frompath));
+        const uint8Contents = contents instanceof Uint8Array ? contents : new Uint8Array(contents);
+        const toDbPath = pathToId(topath);
+        const tofile = BFS.backend.createFile(toDbPath);
+        tofile.open();
+        tofile.write(uint8Contents, 0, uint8Contents.length, 0);
+        tofile.close();
+        return true;
+      } catch (err) {
+        throw new Error(`Failed to copy file from ${frompath} to ${topath}: ${err.message}`);
+      }
+    }
+  } else {
+    // File is not in IndexedDB (likely in root like /default-db.sqlite)
+    // First, ensure it exists in regular FS
+    if (!_exists(frompath)) {
+      throw new Error(`Source file ${frompath} does not exist in filesystem`);
+    }
+    
+    // Read it from FS and write it directly to destination in BlockedFS
+    // Instead of creating it in BlockedFS first and then copying, write directly
+    fromDbPath = pathToId(frompath);
+    
+    try {
+      // Read the file from regular FS
+      const contents = FS.readFile(resolveLink(frompath));
+      const uint8Contents = contents instanceof Uint8Array ? contents : new Uint8Array(contents);
+      
+      // Write directly to destination BlockedFS (no need for intermediate copy)
+      const toDbPath = pathToId(topath);
+      const tofile = BFS.backend.createFile(toDbPath);
+      tofile.open();
+      tofile.write(uint8Contents, 0, uint8Contents.length, 0);
+      tofile.close();
+      
+      return true;
+    } catch (err) {
+      throw new Error(`Failed to copy file from ${frompath} to ${topath}: ${err.message}`);
+    }
+  }
+  
+  // If we get here, the source file is in IndexedDB (in /documents)
+  // Copy from one BlockedFS file to another
   const toDbPath = pathToId(topath);
 
   const fromfile = BFS.backend.createFile(fromDbPath);
@@ -176,8 +238,14 @@ async function _copySqlFile(
   try {
     fromfile.open();
     tofile.open();
+    
+    // Check if source file has valid metadata
+    if (!fromfile.meta || typeof fromfile.meta.size !== 'number') {
+      throw new Error(`Source file ${frompath} has invalid metadata`);
+    }
+    
     const fileSize = fromfile.meta.size;
-    const blockSize = fromfile.meta.blockSize;
+    const blockSize = fromfile.meta.blockSize || 4096;
 
     const buffer = new ArrayBuffer(blockSize);
     const bufferView = new Uint8Array(buffer);
@@ -188,14 +256,24 @@ async function _copySqlFile(
       tofile.write(bufferView, 0, bytesToRead, i);
     }
   } catch (error) {
-    tofile.close();
-    fromfile.close();
-    _removeFile(toDbPath);
+    try {
+      tofile.close();
+    } catch {}
+    try {
+      fromfile.close();
+    } catch {}
+    try {
+      _removeFile(toDbPath);
+    } catch {}
     console.error('Failed to copy database file', error);
-    return false;
+    throw error;
   } finally {
-    tofile.close();
-    fromfile.close();
+    try {
+      tofile.close();
+    } catch {}
+    try {
+      fromfile.close();
+    } catch {}
   }
 
   return true;

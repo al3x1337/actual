@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 
 import { Button } from '@actual-app/components/button';
@@ -43,18 +43,134 @@ export function EditCategoryGroupModal({
   const [selectedCategoryIds, setSelectedCategoryIds] = useState<Set<string>>(
     new Set(initialAssignedIds),
   );
+  
+  // Track last clicked category for shift+click functionality
+  const lastClickedCategoryRef = useRef<{ groupId: string; categoryIndex: number } | null>(null);
+  
+  // Get all categories flattened with their group and index for shift+click
+  const allCategoriesWithIndex = categoryGroups.flatMap(group =>
+    (group.categories || []).map((category, index) => ({
+      category,
+      groupId: group.id,
+      categoryIndex: index,
+    })),
+  );
 
-  const toggleCategory = useCallback((categoryId: string) => {
-    setSelectedCategoryIds(prev => {
-      const next = new Set(prev);
-      if (next.has(categoryId)) {
-        next.delete(categoryId);
-      } else {
-        next.add(categoryId);
-      }
-      return next;
-    });
-  }, []);
+  const toggleCategory = useCallback(
+    (categoryId: string, event?: React.MouseEvent) => {
+      const isShiftClick = event?.shiftKey || false;
+      const isCtrlClick = event?.ctrlKey || event?.metaKey || false;
+      
+      setSelectedCategoryIds(prev => {
+        const next = new Set(prev);
+        const wasSelected = prev.has(categoryId);
+        
+        if (isShiftClick && lastClickedCategoryRef.current) {
+          // Shift+Click: Select/deselect range based on last clicked category
+          const currentIndex = allCategoriesWithIndex.findIndex(
+            item => item.category.id === categoryId,
+          );
+          const lastIndex = allCategoriesWithIndex.findIndex(
+            item =>
+              item.groupId === lastClickedCategoryRef.current?.groupId &&
+              item.categoryIndex === lastClickedCategoryRef.current?.categoryIndex,
+          );
+
+          if (currentIndex !== -1 && lastIndex !== -1) {
+            // Determine the range
+            const start = Math.min(currentIndex, lastIndex);
+            const end = Math.max(currentIndex, lastIndex);
+            const range = allCategoriesWithIndex.slice(start, end + 1);
+
+            // Determine if we're selecting or deselecting based on the last clicked state
+            const lastWasSelected = prev.has(
+              allCategoriesWithIndex[lastIndex].category.id,
+            );
+            
+            // Select or deselect all in range
+            range.forEach(item => {
+              if (lastWasSelected) {
+                next.add(item.category.id);
+              } else {
+                next.delete(item.category.id);
+              }
+            });
+          }
+        } else if (isCtrlClick) {
+          // Ctrl/Cmd+Click: Toggle without affecting other selections
+          if (wasSelected) {
+            next.delete(categoryId);
+          } else {
+            next.add(categoryId);
+          }
+        } else {
+          // Normal click: Toggle this category
+          if (wasSelected) {
+            next.delete(categoryId);
+          } else {
+            next.add(categoryId);
+          }
+        }
+
+        // Update last clicked reference (only for non-Ctrl clicks)
+        if (!isCtrlClick) {
+          const clickedItem = allCategoriesWithIndex.find(
+            item => item.category.id === categoryId,
+          );
+          if (clickedItem) {
+            lastClickedCategoryRef.current = {
+              groupId: clickedItem.groupId,
+              categoryIndex: clickedItem.categoryIndex,
+            };
+          }
+        }
+
+        return next;
+      });
+    },
+    [allCategoriesWithIndex],
+  );
+
+  const toggleGroup = useCallback(
+    (groupId: string) => {
+      const group = categoryGroups.find(g => g.id === groupId);
+      if (!group?.categories) return;
+
+      setSelectedCategoryIds(prev => {
+        const next = new Set(prev);
+        const groupCategoryIds = group.categories?.map(cat => cat.id) || [];
+        const allSelected = groupCategoryIds.every(id => prev.has(id));
+
+        if (allSelected) {
+          // Deselect all categories in the group
+          groupCategoryIds.forEach(id => next.delete(id));
+        } else {
+          // Select all categories in the group
+          groupCategoryIds.forEach(id => next.add(id));
+        }
+
+        return next;
+      });
+    },
+    [categoryGroups],
+  );
+
+  // Helper functions to compute group selection state (computed on each render for reactivity)
+  const isGroupSelected = (groupId: string) => {
+    const group = categoryGroups.find(g => g.id === groupId);
+    if (!group?.categories || group.categories.length === 0) return false;
+    const groupCategoryIds = group.categories.map(cat => cat.id);
+    return groupCategoryIds.length > 0 && groupCategoryIds.every(id => selectedCategoryIds.has(id));
+  };
+
+  const isGroupIndeterminate = (groupId: string) => {
+    const group = categoryGroups.find(g => g.id === groupId);
+    if (!group?.categories || group.categories.length === 0) return false;
+    const selectedCount = group.categories.filter(cat =>
+      selectedCategoryIds.has(cat.id),
+    ).length;
+    return selectedCount > 0 && selectedCount < group.categories.length;
+  };
 
   const handleSave = useCallback(() => {
     const newMap = categoryLabelMap ? { ...categoryLabelMap } : {};
@@ -143,17 +259,40 @@ export function EditCategoryGroupModal({
               <View style={{ gap: 20, paddingBottom: 8 }}>
                 {categoryGroups.map(group => (
                   <View key={group.id} style={{ flexShrink: 0 }}>
-                    <Text
+                    <label
+                      key={`group-${group.id}-${Array.from(selectedCategoryIds).length}`}
                       style={{
-                        fontWeight: 600,
+                        display: 'flex',
+                        alignItems: 'center',
+                        cursor: 'pointer',
                         marginBottom: 10,
-                        fontSize: 14,
-                        color: theme.pageText,
                         flexShrink: 0,
                       }}
+                      onClick={e => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        toggleGroup(group.id);
+                      }}
                     >
-                      {group.name}
-                    </Text>
+                      <Checkbox
+                        checked={isGroupSelected(group.id)}
+                        indeterminate={isGroupIndeterminate(group.id)}
+                        onChange={() => {
+                          // Controlled by label onClick
+                        }}
+                        style={{ flexShrink: 0, marginRight: 8 }}
+                      />
+                      <Text
+                        style={{
+                          fontWeight: 600,
+                          fontSize: 14,
+                          color: theme.pageText,
+                          flexShrink: 0,
+                        }}
+                      >
+                        {group.name}
+                      </Text>
+                    </label>
                     <View style={{ paddingLeft: 20, gap: 6 }}>
                       {group.categories?.map(category => (
                         <label
@@ -167,10 +306,16 @@ export function EditCategoryGroupModal({
                             width: '100%',
                             flexShrink: 0,
                           }}
+                          onClick={e => {
+                            e.stopPropagation();
+                            toggleCategory(category.id, e);
+                          }}
                         >
                           <Checkbox
                             checked={selectedCategoryIds.has(category.id)}
-                            onChange={() => toggleCategory(category.id)}
+                            onChange={() => {
+                              // Controlled by label onClick
+                            }}
                             style={{ flexShrink: 0, marginTop: 2 }}
                           />
                           <Text

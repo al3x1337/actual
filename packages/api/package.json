@@ -15,12 +15,12 @@
   "scripts": {
     "build:app": "yarn workspace loot-core build:api",
     "build:crdt": "yarn workspace @actual-app/crdt build",
-    "build:node": "tsc --p tsconfig.dist.json && tsc-alias -p tsconfig.dist.json",
-    "build:migrations": "cp migrations/*.sql dist/migrations",
-    "build:default-db": "cp default-db.sqlite dist/",
+    "build:node": "tsc -p tsconfig.dist.json && tsc-alias -p tsconfig.dist.json",
+    "build:migrations": "copyfiles migrations/*.sql dist/migrations",
+    "build:default-db": "copyfiles default-db.sqlite dist/",
     "build": "yarn run clean && yarn run build:app && yarn run build:node && yarn run build:migrations && yarn run build:default-db",
     "test": "yarn run build:app && yarn run build:crdt && vitest --run",
-    "clean": "rm -rf dist @types"
+    "clean": "rimraf dist @types"
   },
   "dependencies": {
     "@actual-app/crdt": "workspace:^",
@@ -30,6 +30,8 @@
     "uuid": "^13.0.0"
   },
   "devDependencies": {
+    "copyfiles": "^2.4.1",
+    "rimraf": "^6.0.0",
     "tsc-alias": "^1.8.16",
     "typescript": "^5.9.3",
     "vitest": "^3.2.4"

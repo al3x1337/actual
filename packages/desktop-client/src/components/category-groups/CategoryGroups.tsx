@@ -16,15 +16,6 @@ import { useLocalPref } from '@desktop-client/hooks/useLocalPref';
 import { pushModal } from '@desktop-client/modals/modalsSlice';
 import { useDispatch } from '@desktop-client/redux';
 
-const DEFAULT_LABELS = [
-  { id: 'bills', name: 'Bills' },
-  { id: 'fun-money', name: 'Fun Money' },
-  { id: 'groceries', name: 'Groceries' },
-  { id: 'transportation', name: 'Transportation' },
-  { id: 'utilities', name: 'Utilities' },
-  { id: 'savings', name: 'Savings' },
-];
-
 type CategoryLabel = {
   id: string;
   name: string;
@@ -41,32 +32,21 @@ export function CategoryGroups() {
     'budget.customCategoryLabels',
   );
 
-  // Get all unique labels from the map and include defaults + custom
+  // Get all unique labels from custom labels
   const labels = useMemo(() => {
-    const allLabelIds = new Set<string>();
-    Object.values(categoryLabelMap).forEach(labelIds => {
-      labelIds.forEach(labelId => allLabelIds.add(labelId));
-    });
-    DEFAULT_LABELS.forEach(label => allLabelIds.add(label.id));
-    if (Array.isArray(customLabels)) {
-      customLabels.forEach((label: CategoryLabel) => allLabelIds.add(label.id));
-    }
-
-    const allLabels = [
-      ...DEFAULT_LABELS,
-      ...(Array.isArray(customLabels) ? customLabels : []),
-    ].filter(label => allLabelIds.has(label.id));
+    // Include all custom labels
+    const allCustomLabels = Array.isArray(customLabels) ? customLabels : [];
 
     // Remove duplicates by ID
     const seen = new Set<string>();
-    return allLabels.filter(label => {
+    return allCustomLabels.filter(label => {
       if (seen.has(label.id)) {
         return false;
       }
       seen.add(label.id);
       return true;
     });
-  }, [categoryLabelMap, customLabels]);
+  }, [customLabels]);
 
   const handleAdd = useCallback(() => {
     const name = prompt(t('Enter category group name:'));
@@ -78,7 +58,8 @@ export function CategoryGroups() {
       
       // Check if ID already exists
       const existingCustom = Array.isArray(customLabels) ? customLabels : [];
-      if (DEFAULT_LABELS.find(l => l.id === id) || existingCustom.find((l: CategoryLabel) => l.id === id)) {
+      
+      if (existingCustom.find((l: CategoryLabel) => l.id === id)) {
         alert(t('A category group with this name already exists.'));
         return;
       }
@@ -90,31 +71,36 @@ export function CategoryGroups() {
 
   const handleDelete = useCallback((labelId: string) => {
     const label = labels.find(l => l.id === labelId);
+    if (!label) {
+      return;
+    }
+    
     if (
-      confirm(
+      !confirm(
         t('Delete category group "{{name}}"?', {
-          name: label?.name || labelId,
+          name: label.name,
         }),
       )
     ) {
-      // Remove from all categories
-      const newMap = categoryLabelMap ? { ...categoryLabelMap } : {};
-      Object.keys(newMap).forEach(categoryId => {
-        const labelIds = newMap[categoryId];
-        if (Array.isArray(labelIds)) {
-          newMap[categoryId] = labelIds.filter(id => id !== labelId);
-          if (newMap[categoryId].length === 0) {
-            delete newMap[categoryId];
-          }
+      return;
+    }
+
+    // Remove from all categories
+    const newMap = categoryLabelMap ? { ...categoryLabelMap } : {};
+    Object.keys(newMap).forEach(categoryId => {
+      const labelIds = newMap[categoryId];
+      if (Array.isArray(labelIds)) {
+        newMap[categoryId] = labelIds.filter(id => id !== labelId);
+        if (newMap[categoryId].length === 0) {
+          delete newMap[categoryId];
         }
-      });
-      setCategoryLabelMapPref(newMap);
-      
-      // Remove from custom labels if it's a custom one
-      const isDefault = DEFAULT_LABELS.find(l => l.id === labelId);
-      if (!isDefault && Array.isArray(customLabels)) {
-        setCustomLabels(customLabels.filter((l: CategoryLabel) => l.id !== labelId));
       }
+    });
+    setCategoryLabelMapPref(newMap);
+    
+    // Remove from custom labels
+    if (Array.isArray(customLabels)) {
+      setCustomLabels(customLabels.filter((l: CategoryLabel) => l.id !== labelId));
     }
   }, [categoryLabelMap, customLabels, labels, setCategoryLabelMapPref, setCustomLabels, t]);
 
@@ -152,13 +138,21 @@ export function CategoryGroups() {
   }, [categoryLabelMap]);
 
   return (
-    <View>
+    <View
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        flex: 1,
+        minHeight: 0,
+      }}
+    >
       <View
         style={{
           flexDirection: 'row',
           justifyContent: 'space-between',
           alignItems: 'center',
           marginBottom: 20,
+          flexShrink: 0,
         }}
       >
         <Text style={{ fontSize: 16, fontWeight: 600 }}>
@@ -170,9 +164,16 @@ export function CategoryGroups() {
         </Button>
       </View>
 
-      <View style={{ flex: 1 }}>
+      <View
+        style={{
+          flex: 1,
+          minHeight: 0,
+          overflowY: 'auto',
+          overflowX: 'hidden',
+        }}
+      >
         {labels.length > 0 ? (
-          <View style={{ gap: 8 }}>
+          <View style={{ gap: 8, paddingBottom: 8 }}>
             {labels.map(label => (
               <View
                 key={label.id}
@@ -184,6 +185,7 @@ export function CategoryGroups() {
                   backgroundColor: theme.tableBackground,
                   borderRadius: 4,
                   border: `1px solid ${theme.tableBorder}`,
+                  flexShrink: 0,
                 }}
               >
                 <View style={{ flex: 1 }}>
