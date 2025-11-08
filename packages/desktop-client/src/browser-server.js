@@ -36,6 +36,36 @@ const importScriptsWithRetry = async (script, { maxRetries = 5 } = {}) => {
   }
 };
 
+const normalizeBaseUrl = baseUrl => {
+  if (!baseUrl) {
+    return null;
+  }
+
+  // If the url is already absolute, keep it as-is.
+  if (/^https?:\/\//i.test(baseUrl)) {
+    return baseUrl;
+  }
+
+  // For relative paths ("/foo" or "foo"), build an absolute url from the
+  // worker location. importScripts requires an absolute url, so we can't pass
+  // a relative path through unchanged.
+  const withLeadingSlash = baseUrl.startsWith('/') ? baseUrl : `/${baseUrl}`;
+  return new URL(withLeadingSlash, self.location.origin).toString();
+};
+
+const getBackendWorkerUrls = ({ hash, publicUrl }) => {
+  const normalizedHash = hash || 'dev';
+  const normalizedBases = [normalizeBaseUrl(publicUrl), self.location.origin]
+    .filter(Boolean)
+    // Remove duplicates while preserving order.
+    .filter((value, index, array) => array.indexOf(value) === index);
+
+  return normalizedBases.map(base => {
+    const baseWithSlash = base.endsWith('/') ? base : `${base}/`;
+    return `${baseWithSlash}kcab/kcab.worker.${normalizedHash}.js`;
+  });
+};
+
 const RECONNECT_INTERVAL_MS = 200;
 const MAX_RECONNECT_ATTEMPTS = 500;
 let reconnectAttempts = 0;
@@ -76,10 +106,27 @@ self.addEventListener('message', async event => {
           return;
         }
 
-        await importScriptsWithRetry(
-          `${msg.publicUrl}/kcab/kcab.worker.${hash}.js`,
-          { maxRetries: isDev ? 5 : 0 },
-        );
+        const backendScriptUrls = getBackendWorkerUrls({
+          hash,
+          publicUrl: msg.publicUrl,
+        });
+
+        let lastImportError;
+        for (const scriptUrl of backendScriptUrls) {
+          try {
+            await importScriptsWithRetry(scriptUrl, {
+              maxRetries: isDev ? 5 : 0,
+            });
+            lastImportError = null;
+            break;
+          } catch (error) {
+            lastImportError = error;
+          }
+        }
+
+        if (lastImportError) {
+          throw lastImportError;
+        }
 
         backend.initApp(isDev, self).catch(err => {
           console.log(err);
