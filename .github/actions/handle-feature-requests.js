@@ -138,8 +138,10 @@ async function main() {
         );
 
       if (!commentToCollapse) {
-        console.log('No comment to collapse found');
-        process.exit(1);
+        console.log(
+          'No comment to collapse found; continuing without minimizing.',
+        );
+        return;
       }
 
       const res = await makeAPIRequest(
