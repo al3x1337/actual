@@ -16,8 +16,8 @@ permissions:
 
 env:
   IMAGES: |
-    ghcr.io/${{ github.repository_owner }}/actual-server
-    ghcr.io/${{ github.repository_owner }}/actual
+    ghcr.io/al3x1337/actual-server
+    ghcr.io/al3x1337/actual
 
   # Tag patterns:
   #   - :latest
