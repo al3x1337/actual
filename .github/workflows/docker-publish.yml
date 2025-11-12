@@ -10,8 +10,8 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository_owner }}/actual-server
-
+  IMAGE_NAME: al3x1337/actual-server
+  
 jobs:
   build:
     runs-on: ubuntu-latest
