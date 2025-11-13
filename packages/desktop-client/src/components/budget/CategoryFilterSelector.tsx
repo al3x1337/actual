@@ -303,48 +303,6 @@ export function CategoryFilterSelector({
     onViewSelectionChange?.(
       newSelected.size === 0 ? null : Array.from(newSelected),
     );
-
-    // Find all categories that belong to the selected views
-    if (newSelected.size === 0) {
-      // Restore original collapsed state when clearing filters
-      if (originalCollapsedStateRef.current !== null) {
-        setCollapsedGroupIdsPref(originalCollapsedStateRef.current);
-        originalCollapsedStateRef.current = null;
-      }
-      onFilterChange(null); // Show all categories
-    } else {
-      // Store original collapsed state if this is the first filter applied
-      if (originalCollapsedStateRef.current === null) {
-        originalCollapsedStateRef.current = [...collapsedGroupIds];
-      }
-
-      const filteredCategoryIds = new Set<string>();
-      Object.entries(budgetViewMap).forEach(([categoryId, viewIds]) => {
-        if (Array.isArray(viewIds) && viewIds.some(id => newSelected.has(id))) {
-          filteredCategoryIds.add(categoryId);
-        }
-      });
-
-      // Find groups that contain filtered categories and expand them
-      const groupsToExpand = new Set<string>();
-      categoryGroups.forEach(group => {
-        const hasFilteredCategory = group.categories?.some(cat =>
-          filteredCategoryIds.has(cat.id),
-        );
-        if (hasFilteredCategory && collapsedGroupIds.includes(group.id)) {
-          groupsToExpand.add(group.id);
-        }
-      });
-
-      // Expand groups that contain filtered categories
-      if (groupsToExpand.size > 0) {
-        setCollapsedGroupIdsPref(
-          collapsedGroupIds.filter(id => !groupsToExpand.has(id)),
-        );
-      }
-
-      onFilterChange(Array.from(filteredCategoryIds));
-    }
   };
 
   // Function to assign a category to a view (can be called from a context menu or settings)
@@ -368,6 +326,53 @@ export function CategoryFilterSelector({
     }
     setBudgetViewMapPref(newMap);
   };
+
+  useEffect(() => {
+    if (selectedViews.size === 0) {
+      if (originalCollapsedStateRef.current !== null) {
+        setCollapsedGroupIdsPref(originalCollapsedStateRef.current);
+        originalCollapsedStateRef.current = null;
+      }
+      onFilterChange(null);
+      return;
+    }
+
+    if (originalCollapsedStateRef.current === null) {
+      originalCollapsedStateRef.current = [...collapsedGroupIds];
+    }
+
+    const filteredCategoryIds = new Set<string>();
+    Object.entries(budgetViewMap).forEach(([categoryId, viewIds]) => {
+      if (Array.isArray(viewIds) && viewIds.some(id => selectedViews.has(id))) {
+        filteredCategoryIds.add(categoryId);
+      }
+    });
+
+    const groupsToExpand = new Set<string>();
+    categoryGroups.forEach(group => {
+      const hasFilteredCategory = group.categories?.some(cat =>
+        filteredCategoryIds.has(cat.id),
+      );
+      if (hasFilteredCategory && collapsedGroupIds.includes(group.id)) {
+        groupsToExpand.add(group.id);
+      }
+    });
+
+    if (groupsToExpand.size > 0) {
+      setCollapsedGroupIdsPref(
+        collapsedGroupIds.filter(id => !groupsToExpand.has(id)),
+      );
+    }
+
+    onFilterChange(Array.from(filteredCategoryIds));
+  }, [
+    selectedViews,
+    budgetViewMap,
+    categoryGroups,
+    collapsedGroupIds,
+    onFilterChange,
+    setCollapsedGroupIdsPref,
+  ]);
 
   // Don't show the filter bar if feature disabled or if no budget views are created/in use
   if (!budgetViewsEnabled || views.length === 0) {
@@ -411,12 +416,6 @@ export function CategoryFilterSelector({
           variant="bare"
           onPress={() => {
             setSelectedViews(new Set());
-            // Restore original collapsed state when clearing filters
-            if (originalCollapsedStateRef.current !== null) {
-              setCollapsedGroupIdsPref(originalCollapsedStateRef.current);
-              originalCollapsedStateRef.current = null;
-            }
-            onFilterChange(null);
           }}
           style={{
             fontSize: 13,

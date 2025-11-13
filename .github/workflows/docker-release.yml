@@ -8,7 +8,7 @@ on:
     paths-ignore:
       - README.md
       - LICENSE.txt
-  workflow_dispatch:   # allow manual trigger
+  workflow_dispatch: # allow manual trigger
 
 permissions:
   contents: read
@@ -35,7 +35,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # fetch tags for version info
+          fetch-depth: 0 # fetch tags for version info
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
