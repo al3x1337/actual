@@ -273,7 +273,6 @@ export function BudgetTable(props: BudgetTableProps) {
     const viewId = activeSelectedViews[0];
     // Apply group ordering first when present for this view
     const groupOrder = viewGroupOrder[viewId] || [];
-    const groupsById = new Map(effectiveCategoryGroups.map(g => [g.id, g]));
 
     // If a view has a specific group order, sort groups by that order
     // but preserve global positions for groups not present in the view order.
@@ -281,21 +280,32 @@ export function BudgetTable(props: BudgetTableProps) {
     // from being appended to the end and instead keeps them near their
     // global position as shown in the Edit Budget View modal.
     const orderedGroups = ((): typeof effectiveCategoryGroups => {
-      if (!groupOrder || groupOrder.length === 0) return effectiveCategoryGroups;
+      if (!groupOrder || groupOrder.length === 0) {
+        return effectiveCategoryGroups;
+      }
 
-      const indexById = new Map(effectiveCategoryGroups.map((g, i) => [g.id, i]));
+      const indexById = new Map(
+        effectiveCategoryGroups.map((g, i) => [g.id, i]),
+      );
       const groupOrderMap = new Map(groupOrder.map((id, i) => [id, i]));
 
       return [...effectiveCategoryGroups].sort((a, b) => {
-        const aPos = groupOrderMap.has(a.id) ? groupOrderMap.get(a.id)! : indexById.get(a.id)!;
-        const bPos = groupOrderMap.has(b.id) ? groupOrderMap.get(b.id)! : indexById.get(b.id)!;
+        const aPos = groupOrderMap.has(a.id)
+          ? groupOrderMap.get(a.id)!
+          : indexById.get(a.id)!;
+        const bPos = groupOrderMap.has(b.id)
+          ? groupOrderMap.get(b.id)!
+          : indexById.get(b.id)!;
         return aPos - bPos;
       });
     })();
 
     return orderedGroups.map(group => ({
       ...group,
-      categories: sortCategoriesByOrder(group.categories || [], viewCategoryOrder[viewId] || []),
+      categories: sortCategoriesByOrder(
+        group.categories || [],
+        viewCategoryOrder[viewId] || [],
+      ),
     }));
   }, [
     effectiveCategoryGroups,
