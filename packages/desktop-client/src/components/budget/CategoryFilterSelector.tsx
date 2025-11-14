@@ -364,7 +364,14 @@ export function CategoryFilterSelector({
       );
     }
 
-    onFilterChange(Array.from(filteredCategoryIds));
+    // Preserve global category order when converting to array
+    const orderedFilteredIds = categoryGroups.flatMap(group =>
+      (group.categories || [])
+        .filter(cat => filteredCategoryIds.has(cat.id))
+        .map(cat => cat.id),
+    );
+
+    onFilterChange(orderedFilteredIds);
   }, [
     selectedViews,
     budgetViewMap,
