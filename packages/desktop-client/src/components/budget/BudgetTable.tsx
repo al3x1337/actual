@@ -275,26 +275,27 @@ export function BudgetTable(props: BudgetTableProps) {
     const groupOrder = viewGroupOrder[viewId] || [];
     const groupsById = new Map(effectiveCategoryGroups.map(g => [g.id, g]));
 
-    // If a view has a specific group order, reorder groups accordingly, appending any missing groups
-    let orderedGroups: typeof effectiveCategoryGroups = [];
-    if (groupOrder.length > 0) {
-      for (const gid of groupOrder) {
-        const g = groupsById.get(gid);
-        if (g) orderedGroups.push(g);
-      }
-      for (const g of effectiveCategoryGroups) {
-        if (!groupOrder.includes(g.id)) orderedGroups.push(g);
-      }
-    } else {
-      orderedGroups = effectiveCategoryGroups;
-    }
+    // If a view has a specific group order, sort groups by that order
+    // but preserve global positions for groups not present in the view order.
+    // This prevents newly added groups (not yet recorded in viewGroupOrder)
+    // from being appended to the end and instead keeps them near their
+    // global position as shown in the Edit Budget View modal.
+    const orderedGroups = ((): typeof effectiveCategoryGroups => {
+      if (!groupOrder || groupOrder.length === 0) return effectiveCategoryGroups;
+
+      const indexById = new Map(effectiveCategoryGroups.map((g, i) => [g.id, i]));
+      const groupOrderMap = new Map(groupOrder.map((id, i) => [id, i]));
+
+      return [...effectiveCategoryGroups].sort((a, b) => {
+        const aPos = groupOrderMap.has(a.id) ? groupOrderMap.get(a.id)! : indexById.get(a.id)!;
+        const bPos = groupOrderMap.has(b.id) ? groupOrderMap.get(b.id)! : indexById.get(b.id)!;
+        return aPos - bPos;
+      });
+    })();
 
     return orderedGroups.map(group => ({
       ...group,
-      categories: sortCategoriesByOrder(
-        group.categories || [],
-        viewCategoryOrder[viewId] || [],
-      ),
+      categories: sortCategoriesByOrder(group.categories || [], viewCategoryOrder[viewId] || []),
     }));
   }, [
     effectiveCategoryGroups,
